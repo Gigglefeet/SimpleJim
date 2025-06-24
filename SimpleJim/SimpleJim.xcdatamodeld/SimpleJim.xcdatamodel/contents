@@ -12,7 +12,7 @@
         <attribute name="name" attributeType="String"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <relationship name="exerciseSets" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExerciseSet" inverseName="exercise" inverseEntity="Exercise"/>
+        <relationship name="exerciseSets" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExerciseSet" inverseName="exercise" inverseEntity="ExerciseSet"/>
         <relationship name="trainingDay" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDay" inverseName="exercises" inverseEntity="TrainingDay"/>
     </entity>
     <entity name="ExerciseSet" representedClassName="ExerciseSet" syncable="YES">
