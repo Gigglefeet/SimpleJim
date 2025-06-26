@@ -168,13 +168,18 @@ struct WorkoutSessionView: View {
     }
     
     private func setupWorkoutSession() {
+        print("🔧 Setting up workout session...")
+        
         // Create completed exercises for each template
         for exerciseTemplate in dayTemplate.sortedExerciseTemplates {
+            print("📝 Creating completed exercise for: \(exerciseTemplate.name ?? "unknown")")
+            
             let completedExercise = CompletedExercise(context: viewContext)
             completedExercise.template = exerciseTemplate
             completedExercise.session = trainingSession
             
             // Create sets based on target sets
+            print("🎯 Creating \(exerciseTemplate.targetSets) sets")
             for setIndex in 0..<exerciseTemplate.targetSets {
                 let exerciseSet = ExerciseSet(context: viewContext)
                 exerciseSet.order = Int16(setIndex)
@@ -182,19 +187,38 @@ struct WorkoutSessionView: View {
                 exerciseSet.reps = 0
                 exerciseSet.isCompleted = false
                 exerciseSet.completedExercise = completedExercise
+                
+                // Also add to the other side of the relationship
+                completedExercise.addToExerciseSets(exerciseSet)
+                
+                print("✅ Created set \(setIndex + 1)")
             }
         }
         
         do {
             try viewContext.save()
+            print("💾 Workout session saved successfully")
+            
+            // Refresh the training session to pick up the new relationships
+            viewContext.refresh(trainingSession, mergeChanges: true)
+            
+            // Debug: Check if sets are actually there after save
+            for completedEx in trainingSession.sortedCompletedExercises {
+                print("🔍 After save: \(completedEx.template?.name ?? "unknown") has \(completedEx.sets.count) sets")
+            }
         } catch {
             print("❌ Error setting up workout: \(error)")
         }
     }
     
     private func getSetsForCurrentExercise() -> [ExerciseSet] {
-        guard let completed = completedExercise else { return [] }
-        return completed.sets
+        guard let completed = completedExercise else { 
+            print("❌ No completed exercise found for current exercise")
+            return [] 
+        }
+        let sets = completed.sets
+        print("✅ Found \(sets.count) sets for \(completed.template?.name ?? "unknown")")
+        return sets
     }
     
     private func formatWorkoutTime() -> String {
