@@ -6,6 +6,8 @@ struct DayTemplateDetailView: View {
     @ObservedObject var dayTemplate: TrainingDayTemplate
     
     @State private var showingAddExercise = false
+    @State private var showingWorkoutSession = false
+    @State private var currentTrainingSession: TrainingSession?
     
     var body: some View {
         List {
@@ -90,7 +92,7 @@ struct DayTemplateDetailView: View {
                 // Quick actions
                 Section("Actions") {
                     Button(action: {
-                        // TODO: Start workout from this template
+                        startWorkout()
                     }) {
                         HStack {
                             Image(systemName: "play.circle.fill")
@@ -119,6 +121,30 @@ struct DayTemplateDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAddExercise) {
             CreateExerciseTemplateView(dayTemplate: dayTemplate)
+        }
+        .fullScreenCover(isPresented: $showingWorkoutSession) {
+            if let session = currentTrainingSession {
+                WorkoutSessionView(dayTemplate: dayTemplate, trainingSession: session)
+            }
+        }
+    }
+    
+    private func startWorkout() {
+        // Create a new training session
+        let newSession = TrainingSession(context: viewContext)
+        newSession.date = Date()
+        newSession.template = dayTemplate
+        newSession.notes = nil
+        newSession.sleepHours = 0
+        newSession.proteinGrams = 0
+        
+        do {
+            try viewContext.save()
+            currentTrainingSession = newSession
+            showingWorkoutSession = true
+            print("✅ Started workout session for \(dayTemplate.name ?? "Unknown")")
+        } catch {
+            print("❌ Error starting workout: \(error)")
         }
     }
 }
