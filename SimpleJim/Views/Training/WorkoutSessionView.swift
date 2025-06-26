@@ -260,7 +260,7 @@ struct SetRowView: View {
             
             // Weight input
             VStack(alignment: .leading, spacing: 2) {
-                Text("Weight")
+                Text("Weight (kg)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
