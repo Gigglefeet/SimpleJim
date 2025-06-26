@@ -11,6 +11,7 @@ struct WorkoutSessionView: View {
     @State private var currentExerciseIndex = 0
     @State private var showingFinishAlert = false
     @State private var isFinishing = false
+    @State private var refreshTrigger = 0
     
     var currentExercise: ExerciseTemplate? {
         let exercises = dayTemplate.sortedExerciseTemplates
@@ -95,8 +96,32 @@ struct WorkoutSessionView: View {
                             
                             // Sets
                             VStack(spacing: 12) {
-                                Text("Sets")
-                                    .font(.headline)
+                                HStack {
+                                    Text("Sets")
+                                        .font(.headline)
+                                    
+                                    Spacer()
+                                    
+                                    // Add/Remove set buttons
+                                    HStack(spacing: 8) {
+                                        Button(action: {
+                                            removeSet()
+                                        }) {
+                                            Image(systemName: "minus.circle")
+                                                .foregroundColor(.red)
+                                                .font(.title2)
+                                        }
+                                        .disabled(getSetsForCurrentExercise().count <= 1)
+                                        
+                                        Button(action: {
+                                            addSet()
+                                        }) {
+                                            Image(systemName: "plus.circle")
+                                                .foregroundColor(.green)
+                                                .font(.title2)
+                                        }
+                                    }
+                                }
                                 
                                 LazyVStack(spacing: 8) {
                                     ForEach(getSetsForCurrentExercise()) { set in
@@ -212,10 +237,17 @@ struct WorkoutSessionView: View {
     }
     
     private func getSetsForCurrentExercise() -> [ExerciseSet] {
+        // Force refresh by accessing the trigger (SwiftUI will re-evaluate when this changes)
+        _ = refreshTrigger
+        
         guard let completed = completedExercise else { 
             print("❌ No completed exercise found for current exercise")
             return [] 
         }
+        
+        // Refresh the completed exercise to get latest data
+        viewContext.refresh(completed, mergeChanges: true)
+        
         let sets = completed.sets
         print("✅ Found \(sets.count) sets for \(completed.template?.name ?? "unknown")")
         return sets
@@ -225,6 +257,48 @@ struct WorkoutSessionView: View {
         let elapsed = Date().timeIntervalSince(trainingSession.date ?? Date())
         let minutes = Int(elapsed) / 60
         return "\(minutes)m"
+    }
+    
+    private func addSet() {
+        guard let completed = completedExercise else { return }
+        
+        let newSet = ExerciseSet(context: viewContext)
+        let currentSets = completed.sets
+        newSet.order = Int16(currentSets.count)
+        newSet.weight = 0
+        newSet.reps = 0
+        newSet.isCompleted = false
+        newSet.completedExercise = completed
+        
+        completed.addToExerciseSets(newSet)
+        
+        do {
+            try viewContext.save()
+            refreshTrigger += 1 // Trigger UI update
+            print("✅ Added new set")
+        } catch {
+            print("❌ Error adding set: \(error)")
+        }
+    }
+    
+    private func removeSet() {
+        guard let completed = completedExercise else { return }
+        let sets = completed.sets
+        guard sets.count > 1 else { return } // Don't allow removing the last set
+        
+        // Remove the last set
+        if let lastSet = sets.last {
+            completed.removeFromExerciseSets(lastSet)
+            viewContext.delete(lastSet)
+            
+            do {
+                try viewContext.save()
+                refreshTrigger += 1 // Trigger UI update
+                print("✅ Removed set")
+            } catch {
+                print("❌ Error removing set: \(error)")
+            }
+        }
     }
     
     private func finishWorkout() {
