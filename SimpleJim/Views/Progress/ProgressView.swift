@@ -4,18 +4,18 @@ import CoreData
 struct ProgressView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \TrainingDay.date, ascending: false)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \TrainingSession.date, ascending: false)],
         animation: .default)
-    private var trainingDays: FetchedResults<TrainingDay>
+    private var trainingSessions: FetchedResults<TrainingSession>
     
     var body: some View {
         NavigationView {
             List {
                 Section("Progress Overview") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Total Training Days")
+                        Text("Total Training Sessions")
                             .font(.headline)
-                        Text("\(trainingDays.count)")
+                        Text("\(trainingSessions.count)")
                             .font(.title)
                             .bold()
                             .foregroundColor(.orange)
@@ -67,17 +67,17 @@ struct ProgressView: View {
     }
     
     private var totalWeightLifted: Double {
-        trainingDays.reduce(0) { total, day in
-            total + day.totalWeightLifted
+        trainingSessions.reduce(0) { total, session in
+            total + session.totalWeightLifted
         }
     }
     
     private var averageSleep: Double {
-        let sleepDays = trainingDays.filter { $0.sleepHours > 0 }
-        guard !sleepDays.isEmpty else { return 0 }
-        return sleepDays.reduce(0) { total, day in
-            total + day.sleepHours
-        } / Double(sleepDays.count)
+        let sleepSessions = trainingSessions.filter { $0.sleepHours > 0 }
+        guard !sleepSessions.isEmpty else { return 0 }
+        return sleepSessions.reduce(0) { total, session in
+            total + session.sleepHours
+        } / Double(sleepSessions.count)
     }
 }
 

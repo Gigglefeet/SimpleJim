@@ -1,0 +1,83 @@
+import SwiftUI
+import CoreData
+
+struct CreateProgramView: View {
+    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var programName = ""
+    @State private var programNotes = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Program Details") {
+                    TextField("Program name", text: $programName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    
+                    TextField("Description (optional)", text: $programNotes, axis: .vertical)
+                        .lineLimit(3)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                Section("Getting Started") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("After creating your program, you'll be able to:")
+                            .font(.subheadline)
+                            .bold()
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Add training day templates", systemImage: "calendar.badge.plus")
+                            Label("Define exercises for each day", systemImage: "list.bullet")
+                            Label("Start workouts based on your templates", systemImage: "play.circle")
+                            Label("Track progress over time", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                }
+                
+                Section {
+                    Button("Create Program") {
+                        createProgram()
+                    }
+                    .disabled(programName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .navigationTitle("New Program")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func createProgram() {
+        withAnimation {
+            let newProgram = TrainingProgram(context: viewContext)
+            newProgram.name = programName.trimmingCharacters(in: .whitespacesAndNewlines)
+            newProgram.notes = programNotes.isEmpty ? nil : programNotes
+            newProgram.createdDate = Date()
+            
+            do {
+                try viewContext.save()
+                dismiss()
+            } catch {
+                let nsError = error as NSError
+                print("❌ Error creating program: \(nsError), \(nsError.userInfo)")
+            }
+        }
+    }
+}
+
+struct CreateProgramView_Previews: PreviewProvider {
+    static var previews: some View {
+        CreateProgramView()
+            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    }
+} 

@@ -9,23 +9,39 @@ struct PersistenceController {
         
         // Create sample data for previews ONLY
         #if DEBUG
-        let sampleTrainingDay = TrainingDay(context: viewContext)
-        sampleTrainingDay.date = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        sampleTrainingDay.sleepHours = 7.5
-        sampleTrainingDay.proteinGrams = 150
+        let sampleProgram = TrainingProgram(context: viewContext)
+        sampleProgram.name = "Sample Push/Pull/Legs"
+        sampleProgram.notes = "6-day training program"
+        sampleProgram.createdDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         
-        let sampleExercise = Exercise(context: viewContext)
-        sampleExercise.name = "Sample Bench Press"
-        sampleExercise.muscleGroup = "Chest"
-        sampleExercise.order = 0
-        sampleExercise.trainingDay = sampleTrainingDay
+        let pushDay = TrainingDayTemplate(context: viewContext)
+        pushDay.name = "Push Day"
+        pushDay.order = 0
+        pushDay.program = sampleProgram
         
-        let sampleSet1 = ExerciseSet(context: viewContext)
-        sampleSet1.weight = 80
-        sampleSet1.reps = 8
-        sampleSet1.order = 0
-        sampleSet1.isCompleted = true
-        sampleSet1.exercise = sampleExercise
+        let benchPress = ExerciseTemplate(context: viewContext)
+        benchPress.name = "Bench Press"
+        benchPress.muscleGroup = "Chest"
+        benchPress.targetSets = 4
+        benchPress.order = 0
+        benchPress.dayTemplate = pushDay
+        
+        let sampleSession = TrainingSession(context: viewContext)
+        sampleSession.date = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        sampleSession.sleepHours = 7.5
+        sampleSession.proteinGrams = 150
+        sampleSession.template = pushDay
+        
+        let completedBench = CompletedExercise(context: viewContext)
+        completedBench.template = benchPress
+        completedBench.session = sampleSession
+        
+        let set1 = ExerciseSet(context: viewContext)
+        set1.weight = 80
+        set1.reps = 8
+        set1.order = 0
+        set1.isCompleted = true
+        set1.completedExercise = completedBench
         
         do {
             try viewContext.save()

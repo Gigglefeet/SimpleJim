@@ -11,17 +11,19 @@
 		1A001003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001002 /* ContentView.swift */; };
 		1A001008 /* SimpleJim.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 1A001006 /* SimpleJim.xcdatamodeld */; };
 		1A00100A /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001009 /* PersistenceController.swift */; };
-		1A001010 /* TrainingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00100F /* TrainingDay.swift */; };
-		1A001012 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001011 /* Exercise.swift */; };
+
 		1A001014 /* ExerciseSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001013 /* ExerciseSet.swift */; };
-		1A001016 /* TrainingDayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001015 /* TrainingDayListView.swift */; };
-		1A001018 /* TrainingDayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001017 /* TrainingDayDetailView.swift */; };
 		1A00101A /* AddExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001019 /* AddExerciseView.swift */; };
-		1A00101C /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00101B /* ExerciseDetailView.swift */; };
-		1A00101E /* SleepInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00101D /* SleepInputView.swift */; };
-		1A001020 /* ProteinInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00101F /* ProteinInputView.swift */; };
 		1A001022 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001021 /* ProgressView.swift */; };
 		1A001024 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001023 /* ProfileView.swift */; };
+		1A001030 /* TrainingProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00102F /* TrainingProgram.swift */; };
+		1A001032 /* TrainingDayTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001031 /* TrainingDayTemplate.swift */; };
+		1A001034 /* ExerciseTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001033 /* ExerciseTemplate.swift */; };
+		1A001036 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001035 /* TrainingSession.swift */; };
+		1A001038 /* CompletedExercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001037 /* CompletedExercise.swift */; };
+		1A00103A /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001039 /* ProgramListView.swift */; };
+		1A00103C /* CreateProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103B /* CreateProgramView.swift */; };
+		1A00103E /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103D /* ProgramDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,17 +33,19 @@
 		1A001004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A001007 /* SimpleJim.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = SimpleJim.xcdatamodel; sourceTree = "<group>"; };
 		1A001009 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
-		1A00100F /* TrainingDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDay.swift; sourceTree = "<group>"; };
-		1A001011 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exercise.swift; sourceTree = "<group>"; };
+
 		1A001013 /* ExerciseSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseSet.swift; sourceTree = "<group>"; };
-		1A001015 /* TrainingDayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDayListView.swift; sourceTree = "<group>"; };
-		1A001017 /* TrainingDayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDayDetailView.swift; sourceTree = "<group>"; };
 		1A001019 /* AddExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExerciseView.swift; sourceTree = "<group>"; };
-		1A00101B /* ExerciseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
-		1A00101D /* SleepInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInputView.swift; sourceTree = "<group>"; };
-		1A00101F /* ProteinInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProteinInputView.swift; sourceTree = "<group>"; };
 		1A001021 /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
 		1A001023 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		1A00102F /* TrainingProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgram.swift; sourceTree = "<group>"; };
+		1A001031 /* TrainingDayTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDayTemplate.swift; sourceTree = "<group>"; };
+		1A001033 /* ExerciseTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseTemplate.swift; sourceTree = "<group>"; };
+		1A001035 /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
+		1A001037 /* CompletedExercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedExercise.swift; sourceTree = "<group>"; };
+		1A001039 /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
+		1A00103B /* CreateProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProgramView.swift; sourceTree = "<group>"; };
+		1A00103D /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,8 +100,11 @@
 		1A00100C /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				1A00100F /* TrainingDay.swift */,
-				1A001011 /* Exercise.swift */,
+				1A00102F /* TrainingProgram.swift */,
+				1A001031 /* TrainingDayTemplate.swift */,
+				1A001033 /* ExerciseTemplate.swift */,
+				1A001035 /* TrainingSession.swift */,
+				1A001037 /* CompletedExercise.swift */,
 				1A001013 /* ExerciseSet.swift */,
 			);
 			path = Models;
@@ -106,6 +113,7 @@
 		1A00100D /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				1A001027 /* Programs */,
 				1A00100E /* Training */,
 				1A001025 /* Progress */,
 				1A001026 /* Profile */,
@@ -116,12 +124,7 @@
 		1A00100E /* Training */ = {
 			isa = PBXGroup;
 			children = (
-				1A001015 /* TrainingDayListView.swift */,
-				1A001017 /* TrainingDayDetailView.swift */,
 				1A001019 /* AddExerciseView.swift */,
-				1A00101B /* ExerciseDetailView.swift */,
-				1A00101D /* SleepInputView.swift */,
-				1A00101F /* ProteinInputView.swift */,
 			);
 			path = Training;
 			sourceTree = "<group>";
@@ -140,6 +143,16 @@
 				1A001023 /* ProfileView.swift */,
 			);
 			path = Profile;
+			sourceTree = "<group>";
+		};
+		1A001027 /* Programs */ = {
+			isa = PBXGroup;
+			children = (
+				1A001039 /* ProgramListView.swift */,
+				1A00103B /* CreateProgramView.swift */,
+				1A00103D /* ProgramDetailView.swift */,
+			);
+			path = Programs;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -214,17 +227,19 @@
 				1A001003 /* ContentView.swift in Sources */,
 				1A001001 /* SimpleJimApp.swift in Sources */,
 				1A001008 /* SimpleJim.xcdatamodeld in Sources */,
-				1A001010 /* TrainingDay.swift in Sources */,
-				1A001012 /* Exercise.swift in Sources */,
+
 				1A001014 /* ExerciseSet.swift in Sources */,
-				1A001016 /* TrainingDayListView.swift in Sources */,
-				1A001018 /* TrainingDayDetailView.swift in Sources */,
 				1A00101A /* AddExerciseView.swift in Sources */,
-				1A00101C /* ExerciseDetailView.swift in Sources */,
-				1A00101E /* SleepInputView.swift in Sources */,
-				1A001020 /* ProteinInputView.swift in Sources */,
 				1A001022 /* ProgressView.swift in Sources */,
 				1A001024 /* ProfileView.swift in Sources */,
+				1A001030 /* TrainingProgram.swift in Sources */,
+				1A001032 /* TrainingDayTemplate.swift in Sources */,
+				1A001034 /* ExerciseTemplate.swift in Sources */,
+				1A001036 /* TrainingSession.swift in Sources */,
+				1A001038 /* CompletedExercise.swift in Sources */,
+				1A00103A /* ProgramListView.swift in Sources */,
+				1A00103C /* CreateProgramView.swift in Sources */,
+				1A00103E /* ProgramDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -7,10 +7,10 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            TrainingDayListView()
+            ProgramListView()
                 .tabItem {
                     Image(systemName: "dumbbell.fill")
-                    Text("Training")
+                    Text("Programs")
                 }
                 .tag(0)
             

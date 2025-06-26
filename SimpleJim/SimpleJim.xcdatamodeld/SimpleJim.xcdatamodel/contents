@@ -1,31 +1,69 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
-    <entity name="TrainingDay" representedClassName="TrainingDay" syncable="YES">
-        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23F79" minimumToolsVersion="Xcode 14.0" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    
+    <!-- Training Program Entity -->
+    <entity name="TrainingProgram" representedClassName="TrainingProgram" syncable="YES" codeGenerationType="category/extension">
+        <attribute name="createdDate" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="proteinGrams" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="sleepHours" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <relationship name="exercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Exercise" inverseName="trainingDay" inverseEntity="Exercise"/>
+        <relationship name="dayTemplates" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TrainingDayTemplate" inverseName="program" inverseEntity="TrainingDayTemplate"/>
     </entity>
-    <entity name="Exercise" representedClassName="Exercise" syncable="YES">
+    
+    <!-- Training Day Template Entity -->
+    <entity name="TrainingDayTemplate" representedClassName="TrainingDayTemplate" syncable="YES" codeGenerationType="category/extension">
+        <attribute name="name" attributeType="String"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="exerciseTemplates" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExerciseTemplate" inverseName="dayTemplate" inverseEntity="ExerciseTemplate"/>
+        <relationship name="program" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingProgram" inverseName="dayTemplates" inverseEntity="TrainingProgram"/>
+        <relationship name="trainingSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TrainingSession" inverseName="template" inverseEntity="TrainingSession"/>
+    </entity>
+    
+    <!-- Exercise Template Entity -->
+    <entity name="ExerciseTemplate" representedClassName="ExerciseTemplate" syncable="YES" codeGenerationType="category/extension">
         <attribute name="muscleGroup" attributeType="String"/>
         <attribute name="name" attributeType="String"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <relationship name="exerciseSets" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExerciseSet" inverseName="exercise" inverseEntity="ExerciseSet"/>
-        <relationship name="trainingDay" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDay" inverseName="exercises" inverseEntity="TrainingDay"/>
+        <attribute name="targetSets" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+        <relationship name="completedExercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CompletedExercise" inverseName="template" inverseEntity="CompletedExercise"/>
+        <relationship name="dayTemplate" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDayTemplate" inverseName="exerciseTemplates" inverseEntity="TrainingDayTemplate"/>
     </entity>
-    <entity name="ExerciseSet" representedClassName="ExerciseSet" syncable="YES">
-        <attribute name="isCompleted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+    
+    <!-- Training Session Entity (actual workout instances) -->
+    <entity name="TrainingSession" representedClassName="TrainingSession" syncable="YES" codeGenerationType="category/extension">
+        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="proteinGrams" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="sleepHours" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="completedExercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CompletedExercise" inverseName="session" inverseEntity="CompletedExercise"/>
+        <relationship name="template" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDayTemplate" inverseName="trainingSessions" inverseEntity="TrainingDayTemplate"/>
+    </entity>
+    
+    <!-- Completed Exercise Entity (actual logged exercises) -->
+    <entity name="CompletedExercise" representedClassName="CompletedExercise" syncable="YES" codeGenerationType="category/extension">
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <relationship name="exerciseSets" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExerciseSet" inverseName="completedExercise" inverseEntity="ExerciseSet"/>
+        <relationship name="session" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingSession" inverseName="completedExercises" inverseEntity="TrainingSession"/>
+        <relationship name="template" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ExerciseTemplate" inverseName="completedExercises" inverseEntity="ExerciseTemplate"/>
+    </entity>
+    
+    <!-- Exercise Set Entity (individual sets with weight/reps) -->
+    <entity name="ExerciseSet" representedClassName="ExerciseSet" syncable="YES" codeGenerationType="category/extension">
+        <attribute name="isCompleted" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="reps" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="restSeconds" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="weight" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <relationship name="exercise" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Exercise" inverseName="exerciseSets" inverseEntity="Exercise"/>
+        <relationship name="completedExercise" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CompletedExercise" inverseName="exerciseSets" inverseEntity="CompletedExercise"/>
     </entity>
+    
     <elements>
-        <element name="TrainingDay" positionX="-63" positionY="-18" width="128" height="118"/>
-        <element name="Exercise" positionX="-54" positionY="9" width="128" height="133"/>
-        <element name="ExerciseSet" positionX="-36" positionY="36" width="128" height="133"/>
+        <element name="TrainingProgram" positionX="-63" positionY="-18" width="128" height="103"/>
+        <element name="TrainingDayTemplate" positionX="-54" positionY="90" width="128" height="133"/>
+        <element name="ExerciseTemplate" positionX="-36" positionY="225" width="128" height="148"/>
+        <element name="TrainingSession" positionX="162" positionY="90" width="128" height="133"/>
+        <element name="CompletedExercise" positionX="162" positionY="225" width="128" height="103"/>
+        <element name="ExerciseSet" positionX="378" positionY="225" width="128" height="133"/>
     </elements>
 </model> 

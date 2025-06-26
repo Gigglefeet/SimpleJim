@@ -5,11 +5,12 @@ struct AddExerciseView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     
-    let trainingDay: TrainingDay
+    let trainingDayTemplate: TrainingDayTemplate
     
     @State private var exerciseName = ""
     @State private var selectedMuscleGroup = "Chest"
     @State private var exerciseNotes = ""
+    @State private var targetSets: Int = 3
     
     private let muscleGroups = [
         "Chest", "Back", "Shoulders", "Arms", "Legs", "Core", "Cardio", "Other"
@@ -18,7 +19,7 @@ struct AddExerciseView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Exercise Details") {
+                Section("Exercise Template Details") {
                     TextField("Exercise name", text: $exerciseName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                     
@@ -29,19 +30,25 @@ struct AddExerciseView: View {
                     }
                     .pickerStyle(MenuPickerStyle())
                     
+                    HStack {
+                        Text("Target Sets")
+                        Spacer()
+                        Stepper("\(targetSets)", value: $targetSets, in: 1...10)
+                    }
+                    
                     TextField("Notes (optional)", text: $exerciseNotes, axis: .vertical)
                         .lineLimit(3)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
                 
                 Section {
-                    Button("Add Exercise") {
-                        addExercise()
+                    Button("Add Exercise Template") {
+                        addExerciseTemplate()
                     }
                     .disabled(exerciseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .navigationTitle("Add Exercise")
+            .navigationTitle("Add Exercise Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -53,22 +60,22 @@ struct AddExerciseView: View {
         }
     }
     
-    private func addExercise() {
+    private func addExerciseTemplate() {
         withAnimation {
-            let newExercise = Exercise(context: viewContext)
-            newExercise.name = exerciseName.trimmingCharacters(in: .whitespacesAndNewlines)
-            newExercise.muscleGroup = selectedMuscleGroup
-            newExercise.notes = exerciseNotes.isEmpty ? nil : exerciseNotes
-            newExercise.order = Int16((trainingDay.exercises?.count ?? 0))
-            newExercise.trainingDay = trainingDay
+            let newTemplate = ExerciseTemplate(context: viewContext)
+            newTemplate.name = exerciseName.trimmingCharacters(in: .whitespacesAndNewlines)
+            newTemplate.muscleGroup = selectedMuscleGroup
+            newTemplate.notes = exerciseNotes.isEmpty ? nil : exerciseNotes
+            newTemplate.targetSets = Int16(targetSets)
+            newTemplate.order = Int16(trainingDayTemplate.sortedExerciseTemplates.count)
+            newTemplate.dayTemplate = trainingDayTemplate
             
             do {
                 try viewContext.save()
                 dismiss()
             } catch {
                 let nsError = error as NSError
-                print("❌ Error saving exercise: \(nsError), \(nsError.userInfo)")
-                // Don't crash in production
+                print("❌ Error saving exercise template: \(nsError), \(nsError.userInfo)")
                 #if DEBUG
                 fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
                 #endif
@@ -79,7 +86,14 @@ struct AddExerciseView: View {
 
 struct AddExerciseView_Previews: PreviewProvider {
     static var previews: some View {
-        AddExerciseView(trainingDay: PersistenceController.preview.container.viewContext.registeredObjects.first(where: { $0 is TrainingDay }) as! TrainingDay)
-            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        let context = PersistenceController.preview.container.viewContext
+        
+        // Create a sample training day template for preview
+        let sampleTemplate = TrainingDayTemplate(context: context)
+        sampleTemplate.name = "Push Day"
+        sampleTemplate.order = 0
+        
+        return AddExerciseView(trainingDayTemplate: sampleTemplate)
+            .environment(\.managedObjectContext, context)
     }
 } 
