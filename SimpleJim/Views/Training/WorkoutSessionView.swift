@@ -12,6 +12,7 @@ struct WorkoutSessionView: View {
     @State private var showingFinishAlert = false
     @State private var isFinishing = false
     @State private var refreshTrigger = 0
+    @State private var showingSleepInput = false
     
     private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -37,6 +38,15 @@ struct WorkoutSessionView: View {
                             .bold()
                         
                         Spacer()
+                        
+                        // Sleep tracking button
+                        Button(action: {
+                            showingSleepInput = true
+                        }) {
+                            Image(systemName: trainingSession.sleepHours > 0 ? "moon.stars.fill" : "moon.stars")
+                                .foregroundColor(trainingSession.sleepHours > 0 ? .blue : .gray)
+                                .font(.title2)
+                        }
                         
                         Button("Finish") {
                             showingFinishAlert = true
@@ -194,6 +204,9 @@ struct WorkoutSessionView: View {
             }
         } message: {
             Text("Are you sure you want to finish this workout? Your progress will be saved.")
+        }
+        .sheet(isPresented: $showingSleepInput) {
+            SleepInputView(trainingSession: trainingSession)
         }
     }
     

@@ -53,6 +53,9 @@ struct ProgressView: View {
                     // Muscle Group Distribution
                     muscleGroupChart
                     
+                    // Sleep vs Performance Chart
+                    sleepPerformanceChart
+                    
                     // Recent Sessions List
                     recentSessionsList
                 }
@@ -298,6 +301,46 @@ struct ProgressView: View {
         .cornerRadius(12)
     }
     
+    @available(iOS 16.0, *)
+    private var sleepPerformanceChart: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sleep vs Performance")
+                .font(.headline)
+            
+            if sleepPerformanceData.isEmpty {
+                emptyStateView
+            } else {
+                Chart(sleepPerformanceData) { data in
+                    PointMark(
+                        x: .value("Sleep Hours", data.sleepHours),
+                        y: .value("Total Weight", data.totalWeight)
+                    )
+                    .foregroundStyle(.blue)
+                    .symbol(.circle)
+                    .symbolSize(60)
+                }
+                .frame(height: 200)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: 1)) { value in
+                        AxisGridLine()
+                        AxisValueLabel()
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisValueLabel()
+                    }
+                }
+                .chartXAxisLabel("Sleep Hours")
+                .chartYAxisLabel("Total Weight (kg)")
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
     private var recentSessionsList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recent Sessions")
@@ -312,9 +355,27 @@ struct ProgressView: View {
                             Text(session.template?.name ?? "Unknown Workout")
                                 .font(.headline)
                             
-                            Text(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown Date")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 4) {
+                                Text(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown Date")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                if session.sleepHours > 0 {
+                                    Text("•")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "moon.stars.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                        
+                                        Text("\(session.sleepHours, specifier: "%.1f")h")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
                         }
                         
                         Spacer()
@@ -497,6 +558,16 @@ struct ProgressView: View {
             session.template?.program?.name
         })
     }
+    
+    private var sleepPerformanceData: [SleepPerformanceData] {
+        filteredSessions.compactMap { session in
+            guard session.sleepHours > 0 else { return nil }
+            return SleepPerformanceData(
+                sleepHours: session.sleepHours,
+                totalWeight: session.totalWeightLifted
+            )
+        }
+    }
 }
 
 // MARK: - Data Models
@@ -518,6 +589,12 @@ struct MuscleGroupData: Identifiable {
     let id = UUID()
     let muscleGroup: String
     let weight: Double
+}
+
+struct SleepPerformanceData: Identifiable {
+    let id = UUID()
+    let sleepHours: Double
+    let totalWeight: Double
 }
 
 // MARK: - Stat Card Component
