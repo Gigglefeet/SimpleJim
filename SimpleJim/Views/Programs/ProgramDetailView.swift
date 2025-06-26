@@ -93,7 +93,7 @@ struct ProgramDetailView: View {
         .navigationTitle("Program")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingCreateDayTemplate) {
-            Text("Create Day Template - Coming Soon")
+            CreateDayTemplateView(program: program)
         }
     }
 }
