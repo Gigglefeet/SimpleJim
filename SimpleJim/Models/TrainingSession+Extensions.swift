@@ -21,8 +21,27 @@ extension TrainingSession {
     }
     
     var duration: TimeInterval {
-        // Calculate based on sets and rest time - placeholder for now
-        return TimeInterval(totalSets * 180) // 3 minutes per set average
+        guard let start = startTime, let end = endTime else {
+            // Fallback to estimated duration based on sets
+            return TimeInterval(totalSets * 180) // 3 minutes per set average
+        }
+        return end.timeIntervalSince(start)
+    }
+    
+    var durationFormatted: String {
+        let totalSeconds = Int(duration)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    var isInProgress: Bool {
+        return startTime != nil && endTime == nil
     }
     
     var recoveryDays: Int {

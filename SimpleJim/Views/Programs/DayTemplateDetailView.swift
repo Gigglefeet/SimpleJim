@@ -132,7 +132,10 @@ struct DayTemplateDetailView: View {
     private func startWorkout() {
         // Create a new training session
         let newSession = TrainingSession(context: viewContext)
-        newSession.date = Date()
+        let now = Date()
+        newSession.date = now
+        newSession.setValue(now, forKey: "startTime")
+        newSession.setValue(nil, forKey: "endTime")
         newSession.template = dayTemplate
         newSession.notes = nil
         newSession.sleepHours = 0

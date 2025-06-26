@@ -29,9 +29,11 @@
     
     <entity name="TrainingSession" representedClassName="TrainingSession" syncable="YES" codeGenerationType="class">
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="proteinGrams" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="sleepHours" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="startTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="completedExercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CompletedExercise" inverseName="session" inverseEntity="CompletedExercise"/>
         <relationship name="template" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDayTemplate" inverseName="trainingSessions" inverseEntity="TrainingDayTemplate"/>
     </entity>

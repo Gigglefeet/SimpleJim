@@ -13,6 +13,8 @@ struct WorkoutSessionView: View {
     @State private var isFinishing = false
     @State private var refreshTrigger = 0
     
+    private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
     var currentExercise: ExerciseTemplate? {
         let exercises = dayTemplate.sortedExerciseTemplates
         guard currentExerciseIndex < exercises.count else { return nil }
@@ -61,6 +63,9 @@ struct WorkoutSessionView: View {
                         Text(formatWorkoutTime())
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .onReceive(workoutTimer) { _ in
+                                // Trigger UI update every second
+                            }
                     }
                 }
                 .padding()
@@ -254,9 +259,21 @@ struct WorkoutSessionView: View {
     }
     
     private func formatWorkoutTime() -> String {
-        let elapsed = Date().timeIntervalSince(trainingSession.date ?? Date())
-        let minutes = Int(elapsed) / 60
-        return "\(minutes)m"
+        guard let startTime = trainingSession.startTime else {
+            return "0m"
+        }
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        let totalSeconds = Int(elapsed)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        
+        if hours > 0 {
+            return "\(hours):\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))"
+        } else {
+            return "\(minutes):\(String(format: "%02d", seconds))"
+        }
     }
     
     private func addSet() {
@@ -304,9 +321,13 @@ struct WorkoutSessionView: View {
     private func finishWorkout() {
         isFinishing = true
         
+        // Set end time
+        let endTime = Date()
+        trainingSession.setValue(endTime, forKey: "endTime")
+        
         do {
             try viewContext.save()
-            print("✅ Workout finished and saved")
+            print("✅ Workout finished and saved - Duration: \(trainingSession.durationFormatted)")
             dismiss()
         } catch {
             print("❌ Error finishing workout: \(error)")
