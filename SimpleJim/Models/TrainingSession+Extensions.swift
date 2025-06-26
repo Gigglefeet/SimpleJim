@@ -1,10 +1,8 @@
 import Foundation
 import CoreData
 
-// Core Data generates the main class, we just add extensions
 extension TrainingSession {
     
-    // Computed properties
     var sortedCompletedExercises: [CompletedExercise] {
         guard let exercises = completedExercises?.allObjects as? [CompletedExercise] else { return [] }
         return exercises.sorted { $0.template?.order ?? 0 < $1.template?.order ?? 0 }
@@ -33,7 +31,7 @@ extension TrainingSession {
         
         let calendar = Calendar.current
         let fetchRequest: NSFetchRequest<TrainingSession> = TrainingSession.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "template.program == %@ AND date < %@", program, date as NSDate)
+        fetchRequest.predicate = NSPredicate(format: "template.program == %@ AND date < %@", program, (date ?? Date()) as NSDate)
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         fetchRequest.fetchLimit = 1
         
@@ -42,8 +40,6 @@ extension TrainingSession {
             return 0
         }
         
-        return calendar.dateComponents([.day], from: lastSession.date, to: date).day ?? 0
+        return calendar.dateComponents([.day], from: lastSession.date ?? Date(), to: date ?? Date()).day ?? 0
     }
-}
-
- 
+} 

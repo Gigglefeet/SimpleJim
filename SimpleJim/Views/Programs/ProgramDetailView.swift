@@ -12,7 +12,7 @@ struct ProgramDetailView: View {
             // Program info
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(program.name)
+                    Text(program.name ?? "Unnamed Program")
                         .font(.title2)
                         .bold()
                     
@@ -29,7 +29,7 @@ struct ProgramDetailView: View {
                         
                         Spacer()
                         
-                        Label("Created \(program.createdDate, style: .date)", systemImage: "clock")
+                        Label("Created \(program.createdDate ?? Date(), style: .date)", systemImage: "clock")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -104,7 +104,7 @@ struct DayTemplateRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(dayTemplate.name)
+                Text(dayTemplate.name ?? "Unnamed Day")
                     .font(.headline)
                 
                 Spacer()

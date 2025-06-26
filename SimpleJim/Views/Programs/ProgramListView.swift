@@ -127,7 +127,7 @@ struct ProgramRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(program.name)
+                Text(program.name ?? "Unnamed Program")
                     .font(.headline)
                     .bold()
                 
@@ -149,7 +149,7 @@ struct ProgramRowView: View {
             }
             
             HStack {
-                Label("Created \(dateFormatter.string(from: program.createdDate))", systemImage: "calendar")
+                Label("Created \(dateFormatter.string(from: program.createdDate ?? Date()))", systemImage: "calendar")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 
