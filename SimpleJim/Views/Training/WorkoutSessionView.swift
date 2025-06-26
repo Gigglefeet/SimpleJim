@@ -322,14 +322,18 @@ struct SetRowView: View {
     
     let setNumber: Int
     
+    var setIsCompleted: Bool {
+        return set.weight > 0 && set.reps > 0
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             // Set number
             Text("\(setNumber)")
                 .font(.headline)
                 .frame(width: 30)
-                .foregroundColor(set.isCompleted ? .white : .primary)
-                .background(set.isCompleted ? Color.green : Color.gray.opacity(0.3))
+                .foregroundColor(setIsCompleted ? .white : .primary)
+                .background(setIsCompleted ? Color.green : Color.gray.opacity(0.3))
                 .clipShape(Circle())
             
             // Weight input
@@ -344,6 +348,7 @@ struct SetRowView: View {
                     .frame(width: 80)
                     .onChange(of: weightString) { newValue in
                         set.weight = Double(newValue) ?? 0
+                        updateCompletionStatus()
                         saveContext()
                     }
             }
@@ -364,21 +369,12 @@ struct SetRowView: View {
                     .frame(width: 60)
                     .onChange(of: repsString) { newValue in
                         set.reps = Int16(newValue) ?? 0
+                        updateCompletionStatus()
                         saveContext()
                     }
             }
             
             Spacer()
-            
-            // Complete button
-            Button(action: {
-                set.isCompleted.toggle()
-                saveContext()
-            }) {
-                Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundColor(set.isCompleted ? .green : .gray)
-            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -387,6 +383,10 @@ struct SetRowView: View {
             weightString = set.weight > 0 ? String(set.weight) : ""
             repsString = set.reps > 0 ? String(set.reps) : ""
         }
+    }
+    
+    private func updateCompletionStatus() {
+        set.isCompleted = setIsCompleted
     }
     
     private func saveContext() {
