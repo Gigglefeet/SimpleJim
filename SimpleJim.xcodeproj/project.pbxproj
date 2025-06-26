@@ -18,6 +18,8 @@
 		1A00103C /* CreateProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103B /* CreateProgramView.swift */; };
 		1A00103E /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103D /* ProgramDetailView.swift */; };
 		1A001048 /* CreateDayTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001047 /* CreateDayTemplateView.swift */; };
+		1A00104A /* DayTemplateDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001049 /* DayTemplateDetailView.swift */; };
+		1A00104C /* CreateExerciseTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104B /* CreateExerciseTemplateView.swift */; };
 		1A001040 /* TrainingProgram+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103F /* TrainingProgram+Extensions.swift */; };
 		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
 		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
@@ -38,6 +40,8 @@
 		1A00103B /* CreateProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProgramView.swift; sourceTree = "<group>"; };
 		1A00103D /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramDetailView.swift; sourceTree = "<group>"; };
 		1A001047 /* CreateDayTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateDayTemplateView.swift; sourceTree = "<group>"; };
+		1A001049 /* DayTemplateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTemplateDetailView.swift; sourceTree = "<group>"; };
+		1A00104B /* CreateExerciseTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateExerciseTemplateView.swift; sourceTree = "<group>"; };
 		1A00103F /* TrainingProgram+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingProgram+Extensions.swift"; sourceTree = "<group>"; };
 		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
 		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
@@ -146,6 +150,8 @@
 				1A00103B /* CreateProgramView.swift */,
 				1A00103D /* ProgramDetailView.swift */,
 				1A001047 /* CreateDayTemplateView.swift */,
+				1A001049 /* DayTemplateDetailView.swift */,
+				1A00104B /* CreateExerciseTemplateView.swift */,
 			);
 			path = Programs;
 			sourceTree = "<group>";
@@ -233,6 +239,8 @@
 				1A00103C /* CreateProgramView.swift in Sources */,
 				1A00103E /* ProgramDetailView.swift in Sources */,
 				1A001048 /* CreateDayTemplateView.swift in Sources */,
+				1A00104A /* DayTemplateDetailView.swift in Sources */,
+				1A00104C /* CreateExerciseTemplateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,35 +1,35 @@
 import SwiftUI
 import CoreData
 
-struct ProgramDetailView: View {
+struct DayTemplateDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @ObservedObject var program: TrainingProgram
+    @ObservedObject var dayTemplate: TrainingDayTemplate
     
-    @State private var showingCreateDayTemplate = false
+    @State private var showingAddExercise = false
     
     var body: some View {
         List {
-            // Program info
+            // Day template info
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(program.name ?? "Unnamed Program")
+                    Text(dayTemplate.name ?? "Unnamed Day")
                         .font(.title2)
                         .bold()
                     
-                    if let notes = program.notes, !notes.isEmpty {
+                    if let notes = dayTemplate.notes, !notes.isEmpty {
                         Text(notes)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Label("\(program.totalDays) training days", systemImage: "calendar")
+                        Label("Day \(dayTemplate.order + 1)", systemImage: "calendar")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
                         Spacer()
                         
-                        Label("Created \(program.createdDate ?? Date(), style: .date)", systemImage: "clock")
+                        Label("\(dayTemplate.totalExercises) exercises", systemImage: "list.bullet")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -37,26 +37,26 @@ struct ProgramDetailView: View {
                 .padding(.vertical, 8)
             }
             
-            if program.sortedDayTemplates.isEmpty {
+            if dayTemplate.sortedExerciseTemplates.isEmpty {
                 // Empty state
                 Section {
                     VStack(spacing: 16) {
-                        Image(systemName: "calendar.badge.plus")
+                        Image(systemName: "dumbbell")
                             .font(.system(size: 40))
                             .foregroundColor(.orange.opacity(0.6))
                         
-                        Text("No training days yet")
+                        Text("No exercises yet")
                             .font(.headline)
                         
-                        Text("Add your first training day template to get started")
+                        Text("Add your first exercise to this training day")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
                         Button(action: {
-                            showingCreateDayTemplate = true
+                            showingAddExercise = true
                         }) {
-                            Text("Add Training Day")
+                            Text("Add Exercise")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -69,55 +69,80 @@ struct ProgramDetailView: View {
                     .listRowBackground(Color.clear)
                 }
             } else {
-                // Training day templates
-                Section("Training Days") {
-                    ForEach(program.sortedDayTemplates) { dayTemplate in
-                        NavigationLink(destination: DayTemplateDetailView(dayTemplate: dayTemplate)) {
-                            DayTemplateRowView(dayTemplate: dayTemplate)
-                        }
+                // Exercise templates
+                Section("Exercises") {
+                    ForEach(dayTemplate.sortedExerciseTemplates) { exerciseTemplate in
+                        ExerciseTemplateRowView(exerciseTemplate: exerciseTemplate)
                     }
                     
                     Button(action: {
-                        showingCreateDayTemplate = true
+                        showingAddExercise = true
                     }) {
                         HStack {
                             Image(systemName: "plus.circle")
                                 .foregroundColor(.orange)
-                            Text("Add Training Day")
+                            Text("Add Exercise")
                                 .foregroundColor(.primary)
                         }
                     }
                 }
+                
+                // Quick actions
+                Section("Actions") {
+                    Button(action: {
+                        // TODO: Start workout from this template
+                    }) {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title2)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Start Workout")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
+                                Text("Begin a training session from this template")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
             }
         }
-        .navigationTitle("Program")
+        .navigationTitle("Training Day")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingCreateDayTemplate) {
-            CreateDayTemplateView(program: program)
+        .sheet(isPresented: $showingAddExercise) {
+            CreateExerciseTemplateView(dayTemplate: dayTemplate)
         }
     }
 }
 
-struct DayTemplateRowView: View {
-    let dayTemplate: TrainingDayTemplate
+struct ExerciseTemplateRowView: View {
+    let exerciseTemplate: ExerciseTemplate
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(dayTemplate.name ?? "Unnamed Day")
+                Text(exerciseTemplate.name ?? "Unnamed Exercise")
                     .font(.headline)
                 
                 Spacer()
                 
-                Text("Day \(dayTemplate.order + 1)")
+                Text(exerciseTemplate.muscleGroup ?? "")
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(Color.gray.opacity(0.2))
+                    .background(Color.blue.opacity(0.2))
                     .cornerRadius(8)
             }
             
-            if let notes = dayTemplate.notes, !notes.isEmpty {
+            if let notes = exerciseTemplate.notes, !notes.isEmpty {
                 Text(notes)
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -125,37 +150,31 @@ struct DayTemplateRowView: View {
             }
             
             HStack {
-                Label("\(dayTemplate.totalExercises) exercises", systemImage: "list.bullet")
+                Label("\(exerciseTemplate.targetSets) sets", systemImage: "number.circle")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
-                if let lastSession = dayTemplate.lastSession {
-                    Label("Last: \(lastSession.date ?? Date(), style: .date)", systemImage: "clock.arrow.circlepath")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("Never trained")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text("Exercise \(exerciseTemplate.order + 1)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 2)
     }
 }
 
-struct ProgramDetailView_Previews: PreviewProvider {
+struct DayTemplateDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            ProgramDetailView(program: {
+            DayTemplateDetailView(dayTemplate: {
                 let context = PersistenceController.preview.container.viewContext
-                let program = TrainingProgram(context: context)
-                program.name = "Push/Pull/Legs"
-                program.notes = "6-day training program"
-                program.createdDate = Date()
-                return program
+                let dayTemplate = TrainingDayTemplate(context: context)
+                dayTemplate.name = "Push Day"
+                dayTemplate.notes = "Chest, shoulders, triceps"
+                dayTemplate.order = 0
+                return dayTemplate
             }())
         }
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
