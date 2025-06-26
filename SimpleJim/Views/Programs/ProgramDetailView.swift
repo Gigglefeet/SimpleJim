@@ -132,7 +132,7 @@ struct DayTemplateRowView: View {
                 Spacer()
                 
                 if let lastSession = dayTemplate.lastSession {
-                    Label("Last: \(lastSession.date, style: .date)", systemImage: "clock.arrow.circlepath")
+                    Label("Last: \(lastSession.date ?? Date(), style: .date)", systemImage: "clock.arrow.circlepath")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else {

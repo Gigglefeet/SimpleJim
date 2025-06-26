@@ -159,7 +159,7 @@ struct ProgramRowView: View {
                 if !program.sortedDayTemplates.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(program.sortedDayTemplates.prefix(3), id: \.self) { dayTemplate in
-                            Text(dayTemplate.name)
+                            Text(dayTemplate.name ?? "Day")
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
