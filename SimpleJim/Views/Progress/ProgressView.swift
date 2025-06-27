@@ -516,7 +516,7 @@ struct ProgressView: View {
                     $0.template?.name == exercise 
                 }) else { return nil }
                 
-                let maxWeight = completedExercise.sets.map { $0.weight }.max() ?? 0
+                let maxWeight = completedExercise.sets.map { $0.effectiveWeight }.max() ?? 0
                 guard maxWeight > 0 else { return nil }
                 
                 return ExerciseProgressData(

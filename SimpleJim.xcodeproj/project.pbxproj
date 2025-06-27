@@ -26,6 +26,8 @@
 		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
 		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
 		1A001046 /* CompletedExercise+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001045 /* CompletedExercise+Extensions.swift */; };
+		1A001053 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A001052 /* Assets.xcassets */; };
+		1A001054 /* BodyweightInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001055 /* BodyweightInputView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +52,8 @@
 		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
 		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
 		1A001045 /* CompletedExercise+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CompletedExercise+Extensions.swift"; sourceTree = "<group>"; };
+		1A001052 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A001055 /* BodyweightInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyweightInputView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +89,7 @@
 				1A001000 /* SimpleJimApp.swift */,
 				1A001002 /* ContentView.swift */,
 				1A001004 /* Info.plist */,
+				1A001052 /* Assets.xcassets */,
 				1A00100B /* Core */,
 				1A00100C /* Models */,
 				1A00100D /* Views */,
@@ -129,6 +134,7 @@
 				1A001019 /* AddExerciseView.swift */,
 				1A00104D /* WorkoutSessionView.swift */,
 				1A001051 /* SleepInputView.swift */,
+				1A001055 /* BodyweightInputView.swift */,
 			);
 			path = Training;
 			sourceTree = "<group>";
@@ -220,6 +226,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A001053 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +256,7 @@
 				1A00104C /* CreateExerciseTemplateView.swift in Sources */,
 				1A00104E /* WorkoutSessionView.swift in Sources */,
 				1A001050 /* SleepInputView.swift in Sources */,
+				1A001054 /* BodyweightInputView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

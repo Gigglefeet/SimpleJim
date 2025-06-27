@@ -140,6 +140,7 @@ struct DayTemplateDetailView: View {
         newSession.notes = nil
         newSession.sleepHours = 0
         newSession.proteinGrams = 0
+        newSession.userBodyweight = getUserBodyweight() // Set user's bodyweight
         
         do {
             try viewContext.save()
@@ -149,6 +150,21 @@ struct DayTemplateDetailView: View {
         } catch {
             print("❌ Error starting workout: \(error)")
         }
+    }
+    
+    private func getUserBodyweight() -> Double {
+        // Get the most recent bodyweight from previous sessions
+        let fetchRequest: NSFetchRequest<TrainingSession> = TrainingSession.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "userBodyweight > 0")
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+        fetchRequest.fetchLimit = 1
+        
+        if let lastSession = try? viewContext.fetch(fetchRequest).first {
+            return lastSession.userBodyweight
+        }
+        
+        // Default to 70kg if no previous sessions
+        return 70.0
     }
 }
 

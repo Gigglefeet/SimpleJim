@@ -13,6 +13,7 @@ struct WorkoutSessionView: View {
     @State private var isFinishing = false
     @State private var refreshTrigger = 0
     @State private var showingSleepInput = false
+    @State private var showingBodyweightInput = false
     
     private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -38,6 +39,15 @@ struct WorkoutSessionView: View {
                             .bold()
                         
                         Spacer()
+                        
+                        // Bodyweight button
+                        Button(action: {
+                            showingBodyweightInput = true
+                        }) {
+                            Image(systemName: "person.crop.circle")
+                                .foregroundColor(.orange)
+                                .font(.title2)
+                        }
                         
                         // Sleep tracking button
                         Button(action: {
@@ -208,6 +218,9 @@ struct WorkoutSessionView: View {
         .sheet(isPresented: $showingSleepInput) {
             SleepInputView(trainingSession: trainingSession)
         }
+        .sheet(isPresented: $showingBodyweightInput) {
+            BodyweightInputView(trainingSession: trainingSession)
+        }
     }
     
     private func setupWorkoutSession() {
@@ -357,65 +370,128 @@ struct SetRowView: View {
     let setNumber: Int
     
     var setIsCompleted: Bool {
-        return set.weight > 0 && set.reps > 0
+        return set.hasValidWeight && set.reps > 0
+    }
+    
+    var bodyweightDisplay: String {
+        let bodyweight = set.session?.userBodyweight ?? 70.0
+        let total = bodyweight + set.extraWeight
+        if set.extraWeight > 0 {
+            return "\(Int(bodyweight))kg + \(Int(set.extraWeight))kg = \(Int(total))kg"
+        } else {
+            return "\(Int(bodyweight))kg"
+        }
     }
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Set number
-            Text("\(setNumber)")
-                .font(.headline)
-                .frame(width: 30)
-                .foregroundColor(setIsCompleted ? .white : .primary)
-                .background(setIsCompleted ? Color.green : Color.gray.opacity(0.3))
-                .clipShape(Circle())
-            
-            // Weight input
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Weight (kg)")
-                    .font(.caption)
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                // Set number
+                Text("\(setNumber)")
+                    .font(.headline)
+                    .frame(width: 30)
+                    .foregroundColor(setIsCompleted ? .white : .primary)
+                    .background(setIsCompleted ? Color.green : Color.gray.opacity(0.3))
+                    .clipShape(Circle())
+                
+                // Bodyweight toggle
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Bodyweight")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Toggle("", isOn: Binding(
+                        get: { set.isBodyweight },
+                        set: { newValue in
+                            set.isBodyweight = newValue
+                            if newValue {
+                                // Clear regular weight when switching to bodyweight
+                                set.weight = 0
+                                weightString = ""
+                            } else {
+                                // Clear extra weight when switching away from bodyweight
+                                set.extraWeight = 0
+                                weightString = ""
+                            }
+                            updateCompletionStatus()
+                            saveContext()
+                        }
+                    ))
+                    .toggleStyle(SwitchToggleStyle())
+                    .scaleEffect(0.8)
+                }
+                
+                // Weight/Extra Weight input
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(set.isBodyweight ? "Extra (kg)" : "Weight (kg)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    TextField("0", text: $weightString)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.decimalPad)
+                        .frame(width: 80)
+                        .onChange(of: weightString) { newValue in
+                            let weightValue = Double(newValue) ?? 0
+                            if set.isBodyweight {
+                                set.extraWeight = weightValue
+                            } else {
+                                set.weight = weightValue
+                            }
+                            updateCompletionStatus()
+                            saveContext()
+                        }
+                }
+                
+                Text("×")
+                    .font(.title2)
                     .foregroundColor(.secondary)
                 
-                TextField("0", text: $weightString)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.decimalPad)
-                    .frame(width: 80)
-                    .onChange(of: weightString) { newValue in
-                        set.weight = Double(newValue) ?? 0
-                        updateCompletionStatus()
-                        saveContext()
-                    }
-            }
-            
-            Text("×")
-                .font(.title2)
-                .foregroundColor(.secondary)
-            
-            // Reps input
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Reps")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Reps input
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    TextField("0", text: $repsString)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.numberPad)
+                        .frame(width: 60)
+                        .onChange(of: repsString) { newValue in
+                            set.reps = Int16(newValue) ?? 0
+                            updateCompletionStatus()
+                            saveContext()
+                        }
+                }
                 
-                TextField("0", text: $repsString)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.numberPad)
-                    .frame(width: 60)
-                    .onChange(of: repsString) { newValue in
-                        set.reps = Int16(newValue) ?? 0
-                        updateCompletionStatus()
-                        saveContext()
-                    }
+                Spacer()
             }
             
-            Spacer()
+            // Show effective weight for bodyweight exercises
+            if set.isBodyweight {
+                HStack {
+                    Text("Total: \(bodyweightDisplay)")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .padding(.leading, 42) // Align with weight input
+                    Spacer()
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(10)
         .onAppear {
-            weightString = set.weight > 0 ? String(set.weight) : ""
+            updateWeightDisplay()
             repsString = set.reps > 0 ? String(set.reps) : ""
+        }
+    }
+    
+    private func updateWeightDisplay() {
+        if set.isBodyweight {
+            weightString = set.extraWeight > 0 ? String(set.extraWeight) : ""
+        } else {
+            weightString = set.weight > 0 ? String(set.weight) : ""
         }
     }
     

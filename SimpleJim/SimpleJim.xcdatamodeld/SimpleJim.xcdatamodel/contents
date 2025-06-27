@@ -34,6 +34,7 @@
         <attribute name="proteinGrams" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="sleepHours" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="startTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userBodyweight" attributeType="Double" defaultValueString="70.0" usesScalarValueType="YES"/>
         <relationship name="completedExercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CompletedExercise" inverseName="session" inverseEntity="CompletedExercise"/>
         <relationship name="template" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDayTemplate" inverseName="trainingSessions" inverseEntity="TrainingDayTemplate"/>
     </entity>
@@ -46,6 +47,8 @@
     </entity>
     
     <entity name="ExerciseSet" representedClassName="ExerciseSet" syncable="YES" codeGenerationType="class">
+        <attribute name="extraWeight" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="isBodyweight" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="isCompleted" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="reps" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
@@ -58,8 +61,8 @@
         <element name="TrainingProgram" positionX="-63" positionY="-18" width="128" height="103"/>
         <element name="TrainingDayTemplate" positionX="-54" positionY="90" width="128" height="133"/>
         <element name="ExerciseTemplate" positionX="-36" positionY="225" width="128" height="148"/>
-        <element name="TrainingSession" positionX="162" positionY="90" width="128" height="133"/>
+        <element name="TrainingSession" positionX="162" positionY="90" width="128" height="148"/>
         <element name="CompletedExercise" positionX="162" positionY="225" width="128" height="103"/>
-        <element name="ExerciseSet" positionX="378" positionY="225" width="128" height="133"/>
+        <element name="ExerciseSet" positionX="378" positionY="225" width="128" height="163"/>
     </elements>
 </model> 
