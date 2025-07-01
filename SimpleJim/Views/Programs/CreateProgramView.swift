@@ -8,6 +8,8 @@ struct CreateProgramView: View {
     
     @State private var programName = ""
     @State private var programNotes = ""
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
@@ -56,6 +58,11 @@ struct CreateProgramView: View {
                 }
             }
         }
+        .alert("Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     private func createProgram() {
@@ -70,6 +77,8 @@ struct CreateProgramView: View {
                 dismiss()
             } catch {
                 os_log("Failed to create program: %@", log: .default, type: .error, error.localizedDescription)
+                errorMessage = "Failed to create program. Please try again."
+                showingErrorAlert = true
             }
         }
     }

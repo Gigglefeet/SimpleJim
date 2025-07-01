@@ -47,7 +47,14 @@ struct BodyweightInputView: View {
                                 .keyboardType(.decimalPad)
                                 .frame(width: 80)
                                 .onChange(of: bodyweightString) { newValue in
-                                    bodyweight = Double(newValue) ?? 70.0
+                                    // Input validation: only allow positive numbers up to 500kg
+                                    let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
+                                    if filteredValue != newValue {
+                                        bodyweightString = filteredValue
+                                        return
+                                    }
+                                    
+                                    bodyweight = min(max(Double(filteredValue) ?? 70.0, 20.0), 500.0)
                                 }
                             
                             Text("kg")

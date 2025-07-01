@@ -10,6 +10,8 @@ struct CreateDayTemplateView: View {
     @State private var dayName = ""
     @State private var notes = ""
     @State private var isCreating = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
@@ -62,6 +64,11 @@ struct CreateDayTemplateView: View {
                 }
             }
         }
+        .alert("Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     private func createDayTemplate() {
@@ -82,8 +89,9 @@ struct CreateDayTemplateView: View {
             #if DEBUG
             print("Failed to create day template: \(error.localizedDescription)")
             #endif
+            errorMessage = "Failed to create training day. Please try again."
+            showingErrorAlert = true
             isCreating = false
-            // TODO: Show error alert to user
         }
     }
 }

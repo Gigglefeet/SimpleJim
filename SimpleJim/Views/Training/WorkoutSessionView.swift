@@ -391,7 +391,7 @@ struct SetRowView: View {
     }
     
     var bodyweightDisplay: String {
-        let bodyweight = set.session?.userBodyweight ?? 70.0
+        let bodyweight = set.session?.userBodyweight ?? UserDefaults.standard.double(forKey: "defaultBodyweight") != 0 ? UserDefaults.standard.double(forKey: "defaultBodyweight") : 70.0
         let total = bodyweight + set.extraWeight
         if set.extraWeight > 0 {
             return "\(Int(bodyweight))kg + \(Int(set.extraWeight))kg = \(Int(total))kg"
@@ -449,7 +449,14 @@ struct SetRowView: View {
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
                         .onChange(of: weightString) { newValue in
-                            let weightValue = Double(newValue) ?? 0
+                            // Input validation: only allow positive numbers up to 999.9
+                            let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
+                            if filteredValue != newValue {
+                                weightString = filteredValue
+                                return
+                            }
+                            
+                            let weightValue = min(Double(filteredValue) ?? 0, 999.9)
                             if set.isBodyweight {
                                 set.extraWeight = weightValue
                             } else {
@@ -475,7 +482,15 @@ struct SetRowView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 60)
                         .onChange(of: repsString) { newValue in
-                            set.reps = Int16(newValue) ?? 0
+                            // Input validation: only allow numbers up to 999
+                            let filteredValue = newValue.filter { $0.isNumber }
+                            if filteredValue != newValue {
+                                repsString = filteredValue
+                                return
+                            }
+                            
+                            let repsValue = min(Int(filteredValue) ?? 0, 999)
+                            set.reps = Int16(repsValue)
                             updateCompletionStatus()
                             saveContext()
                         }

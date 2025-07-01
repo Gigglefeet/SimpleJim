@@ -11,6 +11,7 @@ struct ProfileView: View {
     @AppStorage("proteinGoal") private var proteinGoal: Double = 150.0
     @AppStorage("weightUnit") private var weightUnit: String = "kg"
     @AppStorage("preferredRestTime") private var preferredRestTime: Int = 90
+    @AppStorage("defaultBodyweight") private var defaultBodyweight: Double = 70.0
     
     var body: some View {
         NavigationView {
@@ -76,6 +77,23 @@ struct ProfileView: View {
                         Spacer()
                         
                         Stepper("", value: $preferredRestTime, in: 30...300, step: 15)
+                            .labelsHidden()
+                    }
+                    
+                    HStack {
+                        Image(systemName: "person.crop.circle")
+                            .foregroundColor(.orange)
+                        
+                        VStack(alignment: .leading) {
+                            Text("Default Bodyweight")
+                            Text("\(Int(defaultBodyweight))kg")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Stepper("", value: $defaultBodyweight, in: 30...200, step: 1)
                             .labelsHidden()
                     }
                 }

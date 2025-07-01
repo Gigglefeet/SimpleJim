@@ -164,8 +164,8 @@ struct DayTemplateDetailView: View {
             return lastSession.userBodyweight
         }
         
-        // Default to 70kg if no previous sessions
-        return 70.0
+        // Default to user's configured bodyweight
+        return UserDefaults.standard.double(forKey: "defaultBodyweight") != 0 ? UserDefaults.standard.double(forKey: "defaultBodyweight") : 70.0
     }
 }
 

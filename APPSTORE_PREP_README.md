@@ -3,10 +3,14 @@
 ## ✅ **Completed Cleanup Tasks**
 
 - **CRITICAL:** Removed all `fatalError` calls that would crash the app
-- **CRITICAL:** Moved all debug `print` statements behind `#if DEBUG` flags
+- **CRITICAL:** Moved all debug `print` statements behind `#if DEBUG` flags  
 - **CRITICAL:** Fixed production bundle identifier (removed `.dev` suffix)
+- **CRITICAL:** Added input validation to prevent crashes from invalid user input
+- **CRITICAL:** Added user-facing error alerts for Core Data failures
+- **CRITICAL:** Fixed UISceneDelegate configuration issue
 - **MAJOR:** Replaced placeholder Profile view with functional settings
 - **MAJOR:** Added proper error handling throughout the app
+- **MAJOR:** Made bodyweight defaults user-configurable (no more hardcoded 70kg)
 - **MINOR:** Added privacy usage descriptions to Info.plist
 - **MINOR:** Fixed iOS version compatibility for Charts framework
 
@@ -76,8 +80,8 @@ Show these screens:
 These won't block App Store submission but should be addressed:
 
 1. **Export functionality** - Currently shows placeholder
-2. **Import functionality** - Disabled, marked as "Coming Soon"
-3. **Error alerts** - Many error handlers have "TODO: Show error alert to user"
+2. **Import functionality** - Disabled, marked as "Coming Soon"  
+3. **Accessibility** - Missing accessibility labels for better VoiceOver support
 4. **Notification permissions** - Profile has toggle but no actual implementation
 5. **Rest timer** - Could add actual timer functionality
 
@@ -96,9 +100,11 @@ These won't block App Store submission but should be addressed:
 
 Your app is now **significantly more professional**:
 
-✅ **Robust error handling** - No more crashes  
+✅ **Robust error handling** - No more crashes, user-facing error alerts  
 ✅ **Clean production logging** - Debug prints only in debug builds  
+✅ **Input validation** - Prevents crashes from invalid user input  
 ✅ **Functional Profile view** - Real settings that save and work  
+✅ **Configurable defaults** - Users can set their own bodyweight  
 ✅ **Proper bundle ID** - Ready for production  
 ✅ **iOS compatibility** - Works on iOS 15+ with fallbacks  
 ✅ **Privacy compliance** - Usage descriptions included  
