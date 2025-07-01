@@ -180,7 +180,6 @@ struct ProgressView: View {
         }
     }
     
-    @available(iOS 16.0, *)
     private var totalWeightChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Total Weight Lifted Over Time")
@@ -189,15 +188,16 @@ struct ProgressView: View {
             if filteredSessions.isEmpty {
                 emptyStateView
             } else {
-                Chart(weightProgressData) { data in
-                    LineMark(
-                        x: .value("Date", data.date),
-                        y: .value("Weight", data.weight)
-                    )
-                    .foregroundStyle(.orange)
-                    .interpolationMethod(.catmullRom)
-                    
-                    PointMark(
+                if #available(iOS 16.0, *) {
+                    Chart(weightProgressData) { data in
+                        LineMark(
+                            x: .value("Date", data.date),
+                            y: .value("Weight", data.weight)
+                        )
+                        .foregroundStyle(.orange)
+                        .interpolationMethod(.catmullRom)
+                        
+                        PointMark(
                         x: .value("Date", data.date),
                         y: .value("Weight", data.weight)
                     )
@@ -216,6 +216,14 @@ struct ProgressView: View {
                         AxisValueLabel()
                     }
                 }
+                } else {
+                    // Fallback for iOS 15 and below
+                    VStack {
+                        Text("Charts require iOS 16+")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 200)
+                }
             }
         }
         .padding()
@@ -223,7 +231,6 @@ struct ProgressView: View {
         .cornerRadius(12)
     }
     
-    @available(iOS 16.0, *)
     private var exerciseProgressChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -249,20 +256,28 @@ struct ProgressView: View {
             if exerciseProgressData.isEmpty {
                 emptyStateView
             } else {
-                Chart(exerciseProgressData) { data in
-                    LineMark(
-                        x: .value("Date", data.date),
-                        y: .value("Max Weight", data.maxWeight)
-                    )
-                    .foregroundStyle(by: .value("Exercise", data.exerciseName))
-                    .interpolationMethod(.catmullRom)
-                }
-                .frame(height: 200)
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: chartXAxisStride)) { value in
-                        AxisGridLine()
-                        AxisValueLabel(format: .dateTime.month().day())
+                if #available(iOS 16.0, *) {
+                    Chart(exerciseProgressData) { data in
+                        LineMark(
+                            x: .value("Date", data.date),
+                            y: .value("Max Weight", data.maxWeight)
+                        )
+                        .foregroundStyle(by: .value("Exercise", data.exerciseName))
+                        .interpolationMethod(.catmullRom)
                     }
+                    .frame(height: 200)
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: chartXAxisStride)) { value in
+                            AxisGridLine()
+                            AxisValueLabel(format: .dateTime.month().day())
+                        }
+                    }
+                } else {
+                    VStack {
+                        Text("Charts require iOS 16+")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 200)
                 }
             }
         }
@@ -271,7 +286,6 @@ struct ProgressView: View {
         .cornerRadius(12)
     }
     
-    @available(iOS 16.0, *)
     private var muscleGroupChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Weight by Muscle Group")
@@ -280,19 +294,27 @@ struct ProgressView: View {
             if muscleGroupData.isEmpty {
                 emptyStateView
             } else {
-                Chart(muscleGroupData) { data in
-                    BarMark(
-                        x: .value("Weight", data.weight),
-                        y: .value("Muscle Group", data.muscleGroup)
-                    )
-                    .foregroundStyle(.orange)
-                }
-                .frame(height: max(200, CGFloat(muscleGroupData.count * 30)))
-                .chartXAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                        AxisValueLabel()
+                if #available(iOS 16.0, *) {
+                    Chart(muscleGroupData) { data in
+                        BarMark(
+                            x: .value("Weight", data.weight),
+                            y: .value("Muscle Group", data.muscleGroup)
+                        )
+                        .foregroundStyle(.orange)
                     }
+                    .frame(height: max(200, CGFloat(muscleGroupData.count * 30)))
+                    .chartXAxis {
+                        AxisMarks { value in
+                            AxisGridLine()
+                            AxisValueLabel()
+                        }
+                    }
+                } else {
+                    VStack {
+                        Text("Charts require iOS 16+")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 200)
                 }
             }
         }
@@ -301,7 +323,6 @@ struct ProgressView: View {
         .cornerRadius(12)
     }
     
-    @available(iOS 16.0, *)
     private var sleepPerformanceChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Sleep vs Performance")
@@ -310,30 +331,38 @@ struct ProgressView: View {
             if sleepPerformanceData.isEmpty {
                 emptyStateView
             } else {
-                Chart(sleepPerformanceData) { data in
-                    PointMark(
-                        x: .value("Sleep Hours", data.sleepHours),
-                        y: .value("Total Weight", data.totalWeight)
-                    )
-                    .foregroundStyle(.blue)
-                    .symbol(.circle)
-                    .symbolSize(60)
-                }
-                .frame(height: 200)
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: 1)) { value in
-                        AxisGridLine()
-                        AxisValueLabel()
+                if #available(iOS 16.0, *) {
+                    Chart(sleepPerformanceData) { data in
+                        PointMark(
+                            x: .value("Sleep Hours", data.sleepHours),
+                            y: .value("Total Weight", data.totalWeight)
+                        )
+                        .foregroundStyle(.blue)
+                        .symbol(.circle)
+                        .symbolSize(60)
                     }
-                }
-                .chartYAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                        AxisValueLabel()
+                    .frame(height: 200)
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: 1)) { value in
+                            AxisGridLine()
+                            AxisValueLabel()
+                        }
                     }
+                    .chartYAxis {
+                        AxisMarks { value in
+                            AxisGridLine()
+                            AxisValueLabel()
+                        }
+                    }
+                    .chartXAxisLabel("Sleep Hours")
+                    .chartYAxisLabel("Total Weight (kg)")
+                } else {
+                    VStack {
+                        Text("Charts require iOS 16+")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 200)
                 }
-                .chartXAxisLabel("Sleep Hours")
-                .chartYAxisLabel("Total Weight (kg)")
             }
         }
         .padding()
