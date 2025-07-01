@@ -224,18 +224,24 @@ struct WorkoutSessionView: View {
     }
     
     private func setupWorkoutSession() {
-        print("🔧 Setting up workout session...")
+        #if DEBUG
+        print("Setting up workout session...")
+        #endif
         
         // Create completed exercises for each template
         for exerciseTemplate in dayTemplate.sortedExerciseTemplates {
-            print("📝 Creating completed exercise for: \(exerciseTemplate.name ?? "unknown")")
+            #if DEBUG
+            print("Creating completed exercise for: \(exerciseTemplate.name ?? "unknown")")
+            #endif
             
             let completedExercise = CompletedExercise(context: viewContext)
             completedExercise.template = exerciseTemplate
             completedExercise.session = trainingSession
             
             // Create sets based on target sets
-            print("🎯 Creating \(exerciseTemplate.targetSets) sets")
+            #if DEBUG
+            print("Creating \(exerciseTemplate.targetSets) sets")
+            #endif
             for setIndex in 0..<exerciseTemplate.targetSets {
                 let exerciseSet = ExerciseSet(context: viewContext)
                 exerciseSet.order = Int16(setIndex)
@@ -247,23 +253,24 @@ struct WorkoutSessionView: View {
                 // Also add to the other side of the relationship
                 completedExercise.addToExerciseSets(exerciseSet)
                 
-                print("✅ Created set \(setIndex + 1)")
+                #if DEBUG
+                print("Created set \(setIndex + 1)")
+                #endif
             }
         }
         
         do {
             try viewContext.save()
-            print("💾 Workout session saved successfully")
+            #if DEBUG
+            print("Workout session saved successfully")
+            #endif
             
             // Refresh the training session to pick up the new relationships
             viewContext.refresh(trainingSession, mergeChanges: true)
-            
-            // Debug: Check if sets are actually there after save
-            for completedEx in trainingSession.sortedCompletedExercises {
-                print("🔍 After save: \(completedEx.template?.name ?? "unknown") has \(completedEx.sets.count) sets")
-            }
         } catch {
-            print("❌ Error setting up workout: \(error)")
+            #if DEBUG
+            print("Error setting up workout: \(error)")
+            #endif
         }
     }
     
@@ -272,7 +279,9 @@ struct WorkoutSessionView: View {
         _ = refreshTrigger
         
         guard let completed = completedExercise else { 
-            print("❌ No completed exercise found for current exercise")
+            #if DEBUG
+            print("No completed exercise found for current exercise")
+            #endif
             return [] 
         }
         
@@ -280,7 +289,9 @@ struct WorkoutSessionView: View {
         viewContext.refresh(completed, mergeChanges: true)
         
         let sets = completed.sets
-        print("✅ Found \(sets.count) sets for \(completed.template?.name ?? "unknown")")
+        #if DEBUG
+        print("Found \(sets.count) sets for \(completed.template?.name ?? "unknown")")
+        #endif
         return sets
     }
     
@@ -318,9 +329,10 @@ struct WorkoutSessionView: View {
         do {
             try viewContext.save()
             refreshTrigger += 1 // Trigger UI update
-            print("✅ Added new set")
         } catch {
-            print("❌ Error adding set: \(error)")
+            #if DEBUG
+            print("Error adding set: \(error)")
+            #endif
         }
     }
     
@@ -337,9 +349,10 @@ struct WorkoutSessionView: View {
             do {
                 try viewContext.save()
                 refreshTrigger += 1 // Trigger UI update
-                print("✅ Removed set")
             } catch {
-                print("❌ Error removing set: \(error)")
+                #if DEBUG
+                print("Error removing set: \(error)")
+                #endif
             }
         }
     }
@@ -353,10 +366,14 @@ struct WorkoutSessionView: View {
         
         do {
             try viewContext.save()
-            print("✅ Workout finished and saved - Duration: \(trainingSession.durationFormatted)")
+            #if DEBUG
+            print("Workout finished and saved - Duration: \(trainingSession.durationFormatted)")
+            #endif
             dismiss()
         } catch {
-            print("❌ Error finishing workout: \(error)")
+            #if DEBUG
+            print("Error finishing workout: \(error)")
+            #endif
             isFinishing = false
         }
     }
@@ -503,7 +520,9 @@ struct SetRowView: View {
         do {
             try set.managedObjectContext?.save()
         } catch {
-            print("❌ Error saving set: \(error)")
+            #if DEBUG
+            print("Error saving set: \(error)")
+            #endif
         }
     }
 }

@@ -1,7 +1,10 @@
 import CoreData
+import os.log
 
 struct PersistenceController {
     static let shared = PersistenceController()
+    
+    private static let logger = Logger(subsystem: "com.simplejim.app", category: "CoreData")
 
     static var preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
@@ -46,8 +49,7 @@ struct PersistenceController {
         do {
             try viewContext.save()
         } catch {
-            let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            Self.logger.error("Failed to save preview data: \(error.localizedDescription)")
         }
         #endif
         return result
@@ -60,11 +62,18 @@ struct PersistenceController {
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+        
+        container.loadPersistentStores { storeDescription, error in
+            if let error = error {
+                Self.logger.error("Core Data failed to load store: \(error.localizedDescription)")
+                // In production, we should handle this more gracefully
+                // For now, we'll continue with the app potentially in a broken state
+                // TODO: Add proper error recovery or migration handling
+            } else {
+                Self.logger.info("Core Data store loaded successfully")
             }
-        })
+        }
+        
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
 } 

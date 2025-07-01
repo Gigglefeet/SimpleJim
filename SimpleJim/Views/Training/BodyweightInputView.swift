@@ -103,10 +103,14 @@ struct BodyweightInputView: View {
         
         do {
             try viewContext.save()
-            print("✅ Saved bodyweight: \(bodyweight)kg")
+            #if DEBUG
+            print("Saved bodyweight: \(bodyweight)kg")
+            #endif
             dismiss()
         } catch {
-            print("❌ Error saving bodyweight: \(error)")
+            #if DEBUG
+            print("Error saving bodyweight: \(error)")
+            #endif
         }
     }
 }

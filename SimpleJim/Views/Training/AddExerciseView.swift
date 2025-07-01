@@ -74,11 +74,11 @@ struct AddExerciseView: View {
                 try viewContext.save()
                 dismiss()
             } catch {
-                let nsError = error as NSError
-                print("❌ Error saving exercise template: \(nsError), \(nsError.userInfo)")
+                // Log error and continue - user will see the exercise wasn't added
                 #if DEBUG
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                print("Failed to save exercise template: \(error.localizedDescription)")
                 #endif
+                // TODO: Show error alert to user
             }
         }
     }

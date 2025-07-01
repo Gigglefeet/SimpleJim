@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import os.log
 
 struct CreateProgramView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -68,8 +69,7 @@ struct CreateProgramView: View {
                 try viewContext.save()
                 dismiss()
             } catch {
-                let nsError = error as NSError
-                print("❌ Error creating program: \(nsError), \(nsError.userInfo)")
+                os_log("Failed to create program: %@", log: .default, type: .error, error.localizedDescription)
             }
         }
     }

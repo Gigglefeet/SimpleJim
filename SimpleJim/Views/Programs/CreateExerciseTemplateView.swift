@@ -115,12 +115,13 @@ struct CreateExerciseTemplateView: View {
         
         do {
             try viewContext.save()
-            print("✅ Created exercise template: \(newExerciseTemplate.name ?? "Unknown")")
             dismiss()
         } catch {
-            let nsError = error as NSError
-            print("❌ Error creating exercise template: \(nsError), \(nsError.userInfo)")
+            #if DEBUG
+            print("Failed to create exercise template: \(error.localizedDescription)")
+            #endif
             isCreating = false
+            // TODO: Show error alert to user
         }
     }
 }

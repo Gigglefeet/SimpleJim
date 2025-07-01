@@ -77,12 +77,13 @@ struct CreateDayTemplateView: View {
         
         do {
             try viewContext.save()
-            print("✅ Created day template: \(newDayTemplate.name ?? "Unknown")")
             dismiss()
         } catch {
-            let nsError = error as NSError
-            print("❌ Error creating day template: \(nsError), \(nsError.userInfo)")
+            #if DEBUG
+            print("Failed to create day template: \(error.localizedDescription)")
+            #endif
             isCreating = false
+            // TODO: Show error alert to user
         }
     }
 }

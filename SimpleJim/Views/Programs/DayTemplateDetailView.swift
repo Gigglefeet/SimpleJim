@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import os.log
 
 struct DayTemplateDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -146,9 +147,9 @@ struct DayTemplateDetailView: View {
             try viewContext.save()
             currentTrainingSession = newSession
             showingWorkoutSession = true
-            print("✅ Started workout session for \(dayTemplate.name ?? "Unknown")")
+            // Workout session started successfully
         } catch {
-            print("❌ Error starting workout: \(error)")
+            os_log("Failed to start workout session: %@", log: .default, type: .error, error.localizedDescription)
         }
     }
     

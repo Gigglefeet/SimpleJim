@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import os.log
 
 struct ProgramListView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -109,7 +110,8 @@ struct ProgramListView: View {
                 try viewContext.save()
             } catch {
                 let nsError = error as NSError
-                print("❌ Error deleting program: \(nsError), \(nsError.userInfo)")
+                // Log error but continue - user will see the program wasn't deleted
+                os_log("Failed to delete program: %@", log: .default, type: .error, nsError.localizedDescription)
             }
         }
     }

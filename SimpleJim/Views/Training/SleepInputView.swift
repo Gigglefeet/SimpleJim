@@ -211,10 +211,14 @@ struct SleepInputView: View {
         
         do {
             try viewContext.save()
-            print("✅ Sleep data saved: \(sleepHours) hours")
+            #if DEBUG
+            print("Sleep data saved: \(sleepHours) hours")
+            #endif
             dismiss()
         } catch {
-            print("❌ Error saving sleep data: \(error)")
+            #if DEBUG
+            print("Error saving sleep data: \(error)")
+            #endif
         }
     }
 }
