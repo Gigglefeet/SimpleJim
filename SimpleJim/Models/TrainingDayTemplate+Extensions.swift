@@ -58,25 +58,86 @@ extension TrainingDayTemplate {
         return (supersetGroups.max() ?? 0) + 1
     }
     
-    /// Creates a superset from the given exercises
+    /// Creates a superset from the given exercises and automatically reorders them to be adjacent
     func createSuperset(from exercises: [ExerciseTemplate], in context: NSManagedObjectContext) {
         let supersetNumber = nextSupersetGroupNumber
         
         #if DEBUG
-        print("📝 Assigning superset group \(supersetNumber) to exercises:")
+        print("📝 Creating superset \(supersetNumber) and reordering exercises:")
+        print("   Selected exercises: \(exercises.map { "\($0.name ?? "Unknown") (order: \($0.order))" })")
         #endif
         
-        for exercise in exercises {
-            exercise.supersetGroup = supersetNumber
+        // Step 1: Sort the selected exercises by their current order
+        let sortedSelectedExercises = exercises.sorted { $0.order < $1.order }
+        
+        // Step 2: Find the starting position (lowest order among selected exercises)
+        guard let startPosition = sortedSelectedExercises.first?.order else {
             #if DEBUG
-            print("   - \(exercise.name ?? "Unknown"): \(exercise.supersetGroup)")
+            print("❌ No exercises provided for superset creation")
             #endif
+            return
         }
+        
+        // Step 3: Get all exercises and sort them by order
+        let allExercises = sortedExerciseTemplates
+        
+        #if DEBUG
+        print("   Before reordering:")
+        for (index, exercise) in allExercises.enumerated() {
+            print("     \(index): \(exercise.name ?? "Unknown") (order: \(exercise.order))")
+        }
+        #endif
+        
+        // Step 4: Create new order array
+        var newOrderedExercises: [ExerciseTemplate] = []
+        var exerciseIndex = 0
+        
+        // Add exercises before the superset position
+        while exerciseIndex < allExercises.count && allExercises[exerciseIndex].order < startPosition {
+            let exercise = allExercises[exerciseIndex]
+            if !exercises.contains(exercise) {
+                newOrderedExercises.append(exercise)
+            }
+            exerciseIndex += 1
+        }
+        
+        // Add superset exercises consecutively
+        newOrderedExercises.append(contentsOf: sortedSelectedExercises)
+        
+        // Add remaining exercises (skipping the ones already in superset)
+        while exerciseIndex < allExercises.count {
+            let exercise = allExercises[exerciseIndex]
+            if !exercises.contains(exercise) {
+                newOrderedExercises.append(exercise)
+            }
+            exerciseIndex += 1
+        }
+        
+        // Step 5: Assign new orders and superset groups
+        for (index, exercise) in newOrderedExercises.enumerated() {
+            exercise.order = Int16(index)
+            
+            // Assign superset group to selected exercises
+            if exercises.contains(exercise) {
+                exercise.supersetGroup = supersetNumber
+                #if DEBUG
+                print("   ✅ \(exercise.name ?? "Unknown"): order \(index), superset \(supersetNumber)")
+                #endif
+            } else {
+                #if DEBUG
+                print("   📍 \(exercise.name ?? "Unknown"): order \(index)")
+                #endif
+            }
+        }
+        
+        #if DEBUG
+        print("   After reordering - Superset exercises are now adjacent!")
+        #endif
         
         do {
             try context.save()
             #if DEBUG
-            print("✅ Superset saved successfully")
+            print("✅ Superset created and reordered successfully")
             #endif
         } catch {
             #if DEBUG

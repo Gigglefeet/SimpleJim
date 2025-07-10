@@ -187,18 +187,29 @@ struct DayTemplateDetailView: View {
         print("🎯 Creating superset from: \(exercises.map { $0.name ?? "Unknown" })")
         #endif
         
-        withAnimation(.spring()) {
+        // Haptic feedback for superset creation
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // Smooth reordering animation
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             dayTemplate.createSuperset(from: exercises, in: viewContext)
             
             // Force UI refresh by updating the managed object context
             viewContext.refresh(dayTemplate, mergeChanges: true)
             
             #if DEBUG
-            print("✅ Superset created! Groups now: \(dayTemplate.exerciseGroups.count)")
+            print("✅ Superset created and reordered! Groups now: \(dayTemplate.exerciseGroups.count)")
             for group in dayTemplate.exerciseGroups {
                 print("   - \(group.isSuperset ? "Superset" : "Standalone"): \(group.exercises.map { $0.name ?? "Unknown" })")
             }
             #endif
+        }
+        
+        // Success haptic feedback after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
         }
     }
     

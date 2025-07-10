@@ -15,8 +15,16 @@ struct WorkoutSessionView: View {
     @State private var refreshTrigger = 0
     @State private var showingSleepInput = false
     @State private var showingBodyweightInput = false
+    @State private var workoutElapsedTime: TimeInterval = 0
+    
+    // Rest Timer State
+    @State private var restTimeRemaining: TimeInterval = 0
+    @State private var restTimerActive = false
+    @State private var defaultRestTime: TimeInterval = 90 // 90 seconds default
+    @State private var showingRestSettings = false
     
     private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let restTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     // MARK: - Workout Navigation Logic
     
@@ -133,34 +141,55 @@ struct WorkoutSessionView: View {
                 // Progress header
                 VStack(spacing: 12) {
                     HStack {
-                        Text(dayTemplate.name ?? "Workout")
-                            .font(.title2)
-                            .bold()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(dayTemplate.name ?? "Workout")
+                                .font(.title2)
+                                .bold()
+                            
+                            // Prominent Training Day Timer
+                            HStack(spacing: 4) {
+                                Image(systemName: "stopwatch")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                                
+                                Text(formatWorkoutTime())
+                                    .font(.headline)
+                                    .bold()
+                                    .foregroundColor(.green)
+                                    .animation(.none, value: workoutElapsedTime)
+                                
+                                Text("workout time")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                         
                         Spacer()
                         
-                        // Bodyweight button
-                        Button(action: {
-                            showingBodyweightInput = true
-                        }) {
-                            Image(systemName: "person.crop.circle")
-                                .foregroundColor(.orange)
-                                .font(.title2)
+                        HStack(spacing: 12) {
+                            // Bodyweight button
+                            Button(action: {
+                                showingBodyweightInput = true
+                            }) {
+                                Image(systemName: "person.crop.circle")
+                                    .foregroundColor(.orange)
+                                    .font(.title2)
+                            }
+                            
+                            // Sleep tracking button
+                            Button(action: {
+                                showingSleepInput = true
+                            }) {
+                                Image(systemName: trainingSession.sleepHours > 0 ? "moon.stars.fill" : "moon.stars")
+                                    .foregroundColor(trainingSession.sleepHours > 0 ? .blue : .gray)
+                                    .font(.title2)
+                            }
+                            
+                            Button("Finish") {
+                                showingFinishAlert = true
+                            }
+                            .foregroundColor(.orange)
                         }
-                        
-                        // Sleep tracking button
-                        Button(action: {
-                            showingSleepInput = true
-                        }) {
-                            Image(systemName: trainingSession.sleepHours > 0 ? "moon.stars.fill" : "moon.stars")
-                                .foregroundColor(trainingSession.sleepHours > 0 ? .blue : .gray)
-                                .font(.title2)
-                        }
-                        
-                        Button("Finish") {
-                            showingFinishAlert = true
-                        }
-                        .foregroundColor(.orange)
                     }
                     
                     // Progress bar
@@ -176,12 +205,10 @@ struct WorkoutSessionView: View {
                         
                         Spacer()
                         
-                        Text(formatWorkoutTime())
-                            .font(.caption)
+                        // Smaller secondary time display
+                        Text("Started at \(formatStartTime())")
+                            .font(.caption2)
                             .foregroundColor(.secondary)
-                            .onReceive(workoutTimer) { _ in
-                                // Trigger UI update every second
-                            }
                     }
                 }
                 .padding()
@@ -288,11 +315,39 @@ struct WorkoutSessionView: View {
                                 
                                 LazyVStack(spacing: 8) {
                                     ForEach(getSetsForCurrentExercise()) { set in
-                                        SetRowView(set: set, setNumber: Int(set.order) + 1)
+                                        SetRowView(set: set, setNumber: Int(set.order) + 1) {
+                                            // Auto-start rest timer when any set is completed
+                                            startRestTimer()
+                                        }
                                     }
                                 }
                             }
                             .padding()
+                            
+                            // Rest Timer Section
+                            if restTimerActive {
+                                RestTimerView(
+                                    timeRemaining: $restTimeRemaining,
+                                    defaultTime: $defaultRestTime,
+                                    isActive: $restTimerActive,
+                                    onSettingsPressed: {
+                                        showingRestSettings = true
+                                    },
+                                    onSkipPressed: {
+                                        skipRest()
+                                    },
+                                    onPausePressed: {
+                                        pauseRest()
+                                    },
+                                    onResetPressed: {
+                                        resetRest()
+                                    }
+                                )
+                                .padding()
+                                .onReceive(restTimer) { _ in
+                                    updateRestTimer()
+                                }
+                            }
                             
                             // Navigation buttons
                             HStack(spacing: 20) {
@@ -340,6 +395,10 @@ struct WorkoutSessionView: View {
         }
         .onAppear {
             setupWorkoutSession()
+            loadRestTimerSettings()
+        }
+        .onReceive(workoutTimer) { _ in
+            updateWorkoutTime()
         }
         .alert("Finish Workout?", isPresented: $showingFinishAlert) {
             Button("Cancel", role: .cancel) { }
@@ -354,6 +413,9 @@ struct WorkoutSessionView: View {
         }
         .sheet(isPresented: $showingBodyweightInput) {
             BodyweightInputView(trainingSession: trainingSession)
+        }
+        .sheet(isPresented: $showingRestSettings) {
+            RestTimerSettingsView(defaultRestTime: $defaultRestTime)
         }
     }
     
@@ -469,12 +531,7 @@ struct WorkoutSessionView: View {
     }
     
     private func formatWorkoutTime() -> String {
-        guard let startTime = trainingSession.startTime else {
-            return "0m"
-        }
-        
-        let elapsed = Date().timeIntervalSince(startTime)
-        let totalSeconds = Int(elapsed)
+        let totalSeconds = Int(workoutElapsedTime)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -484,6 +541,102 @@ struct WorkoutSessionView: View {
         } else {
             return "\(minutes):\(String(format: "%02d", seconds))"
         }
+    }
+    
+    private func updateWorkoutTime() {
+        guard let startTime = trainingSession.startTime else { return }
+        workoutElapsedTime = Date().timeIntervalSince(startTime)
+    }
+    
+    private func formatStartTime() -> String {
+        guard let startTime = trainingSession.startTime else {
+            return "N/A"
+        }
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .none
+        dateFormatter.timeStyle = .short
+        return dateFormatter.string(from: startTime)
+    }
+    
+    // MARK: - Rest Timer Methods
+    
+    private func startRestTimer() {
+        restTimeRemaining = defaultRestTime
+        restTimerActive = true
+        
+        #if DEBUG
+        print("⏰ Started rest timer: \(Int(defaultRestTime))s")
+        #endif
+    }
+    
+    private func updateRestTimer() {
+        guard restTimerActive else { return }
+        
+        if restTimeRemaining > 0 {
+            restTimeRemaining -= 1
+            
+            // Warning haptic at 10 seconds remaining
+            if restTimeRemaining == 10 {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+                #if DEBUG
+                print("⚠️ Rest timer: 10 seconds remaining")
+                #endif
+            }
+            
+            // Final countdown haptic at 3, 2, 1
+            if restTimeRemaining <= 3 && restTimeRemaining > 0 {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                impactFeedback.impactOccurred()
+                #if DEBUG
+                print("⏰ Rest timer countdown: \(Int(restTimeRemaining))")
+                #endif
+            }
+        } else {
+            // Rest time completed
+            restTimerActive = false
+            
+            // Strong completion haptic feedback (3 pulses)
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                impactFeedback.impactOccurred()
+            }
+            
+            #if DEBUG
+            print("✅ Rest timer completed! Ready for next set")
+            #endif
+        }
+    }
+    
+    private func pauseRest() {
+        restTimerActive = false
+        #if DEBUG
+        print("⏸️ Rest timer paused")
+        #endif
+    }
+    
+    private func resetRest() {
+        restTimeRemaining = defaultRestTime
+        restTimerActive = true
+        #if DEBUG
+        print("🔄 Rest timer reset to \(Int(defaultRestTime))s")
+        #endif
+    }
+    
+    private func skipRest() {
+        restTimerActive = false
+        restTimeRemaining = 0
+        #if DEBUG
+        print("⏭️ Rest timer skipped")
+        #endif
     }
     
     private func addSet() {
@@ -550,6 +703,27 @@ struct WorkoutSessionView: View {
             isFinishing = false
         }
     }
+    
+    private func loadRestTimerSettings() {
+        let savedTime = UserDefaults.standard.double(forKey: "defaultRestTime")
+        if savedTime > 0 {
+            defaultRestTime = savedTime
+            #if DEBUG
+            print("Loaded default rest time from UserDefaults: \(Int(savedTime))s")
+            #endif
+        } else {
+            #if DEBUG
+            print("No default rest time found in UserDefaults, using default: \(Int(defaultRestTime))s")
+            #endif
+        }
+        
+        // Initialize workout timer immediately
+        updateWorkoutTime()
+        
+        #if DEBUG
+        print("⏱️ Live workout timer initialized")
+        #endif
+    }
 }
 
 // MARK: - Array Extension for Safe Access
@@ -568,6 +742,7 @@ struct SetRowView: View {
     @State private var repsString = ""
     
     let setNumber: Int
+    var onSetCompleted: (() -> Void)? = nil
     
     var setIsCompleted: Bool {
         return set.hasValidWeight && set.reps > 0
@@ -711,7 +886,17 @@ struct SetRowView: View {
     }
     
     private func updateCompletionStatus() {
-        set.isCompleted = setIsCompleted
+        let wasCompleted = set.isCompleted
+        let isNowCompleted = setIsCompleted
+        set.isCompleted = isNowCompleted
+        
+        // Auto-start rest timer when set becomes completed
+        if !wasCompleted && isNowCompleted {
+            #if DEBUG
+            print("🎯 Set completed! Triggering rest timer")
+            #endif
+            onSetCompleted?()
+        }
     }
     
     private func saveContext() {
@@ -736,5 +921,281 @@ struct WorkoutSessionView_Previews: PreviewProvider {
         
         return WorkoutSessionView(dayTemplate: dayTemplate, trainingSession: session)
             .environment(\.managedObjectContext, context)
+    }
+}
+
+// MARK: - Rest Timer Component
+
+struct RestTimerView: View {
+    @Binding var timeRemaining: TimeInterval
+    @Binding var defaultTime: TimeInterval
+    @Binding var isActive: Bool
+    
+    let onSettingsPressed: () -> Void
+    let onSkipPressed: () -> Void
+    let onPausePressed: () -> Void
+    let onResetPressed: () -> Void
+    
+    private var timeDisplay: String {
+        let minutes = Int(timeRemaining) / 60
+        let seconds = Int(timeRemaining) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private var progressPercentage: Double {
+        guard defaultTime > 0 else { return 0 }
+        return (defaultTime - timeRemaining) / defaultTime
+    }
+    
+    private var timerColor: Color {
+        if timeRemaining <= 10 {
+            return .red
+        } else if timeRemaining <= 30 {
+            return .orange
+        } else {
+            return .blue
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Timer Header
+            HStack {
+                Image(systemName: "timer")
+                    .foregroundColor(timerColor)
+                    .font(.title2)
+                
+                Text("Rest Time")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button(action: onSettingsPressed) {
+                    Image(systemName: "gear")
+                        .foregroundColor(.gray)
+                        .font(.title3)
+                }
+            }
+            
+            // Large Timer Display
+            VStack(spacing: 8) {
+                Text(timeDisplay)
+                    .font(.system(size: 48, weight: .bold, design: .monospaced))
+                    .foregroundColor(timerColor)
+                    .animation(.easeInOut(duration: 0.3), value: timerColor)
+                
+                // Progress Bar
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 8)
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(timerColor)
+                        .frame(width: UIScreen.main.bounds.width * 0.8 * progressPercentage, height: 8)
+                        .animation(.linear(duration: 0.1), value: progressPercentage)
+                }
+                .frame(width: UIScreen.main.bounds.width * 0.8)
+                
+                Text("Rest between sets")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Timer Controls
+            HStack(spacing: 20) {
+                // Reset Button
+                Button(action: onResetPressed) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Reset")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                
+                // Pause/Resume Button
+                Button(action: onPausePressed) {
+                    HStack(spacing: 4) {
+                        Image(systemName: isActive ? "pause.fill" : "play.fill")
+                        Text(isActive ? "Pause" : "Resume")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                
+                // Skip Button
+                Button(action: onSkipPressed) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "forward.fill")
+                        Text("Skip")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+    }
+}
+
+// MARK: - Rest Timer Settings
+
+struct RestTimerSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var defaultRestTime: TimeInterval
+    
+    @State private var selectedTime: TimeInterval
+    
+    let restTimeOptions: [TimeInterval] = [30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300]
+    
+    init(defaultRestTime: Binding<TimeInterval>) {
+        self._defaultRestTime = defaultRestTime
+        self._selectedTime = State(initialValue: defaultRestTime.wrappedValue)
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        
+        if minutes > 0 && seconds > 0 {
+            return "\(minutes)m \(seconds)s"
+        } else if minutes > 0 {
+            return "\(minutes)m"
+        } else {
+            return "\(seconds)s"
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                VStack(spacing: 12) {
+                    Image(systemName: "timer.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.blue)
+                    
+                    Text("Rest Timer Settings")
+                        .font(.title2)
+                        .bold()
+                    
+                    Text("Choose your default rest time between sets")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Current Setting")
+                        .font(.headline)
+                    
+                    HStack {
+                        Text("Rest Time:")
+                        Spacer()
+                        Text(formatTime(selectedTime))
+                            .font(.title3)
+                            .bold()
+                            .foregroundColor(.blue)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    
+                    Text("Quick Select")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
+                        ForEach(restTimeOptions, id: \.self) { time in
+                            Button(action: {
+                                selectedTime = time
+                            }) {
+                                VStack(spacing: 4) {
+                                    Text(formatTime(time))
+                                        .font(.headline)
+                                        .bold()
+                                    
+                                    if time == 90 {
+                                        Text("Default")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .foregroundColor(selectedTime == time ? .white : .primary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(selectedTime == time ? Color.blue : Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("💡 Tips")
+                            .font(.headline)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("• 60-90s: Strength training")
+                            Text("• 90-120s: Heavy compound movements")
+                            Text("• 45-60s: Hypertrophy/muscle building")
+                            Text("• 30-45s: Endurance/light weights")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                
+                Spacer()
+                
+                Button("Save Settings") {
+                    defaultRestTime = selectedTime
+                    UserDefaults.standard.set(selectedTime, forKey: "defaultRestTime")
+                    dismiss()
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .font(.headline)
+            }
+            .padding()
+            .navigationTitle("Rest Timer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .onAppear {
+            // Load saved setting
+            let savedTime = UserDefaults.standard.double(forKey: "defaultRestTime")
+            if savedTime > 0 {
+                selectedTime = savedTime
+                defaultRestTime = savedTime
+            }
+        }
     }
 } 
