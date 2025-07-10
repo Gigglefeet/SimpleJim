@@ -111,6 +111,7 @@ struct CreateExerciseTemplateView: View {
         newExerciseTemplate.targetSets = Int16(targetSets)
         newExerciseTemplate.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines)
         newExerciseTemplate.order = Int16(dayTemplate.sortedExerciseTemplates.count)
+        newExerciseTemplate.supersetGroup = 0 // Default to standalone exercise
         newExerciseTemplate.dayTemplate = dayTemplate
         
         do {

@@ -22,6 +22,7 @@
         <attribute name="name" attributeType="String"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="order" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="supersetGroup" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="targetSets" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
         <relationship name="completedExercises" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CompletedExercise" inverseName="template" inverseEntity="CompletedExercise"/>
         <relationship name="dayTemplate" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TrainingDayTemplate" inverseName="exerciseTemplates" inverseEntity="TrainingDayTemplate"/>
@@ -60,7 +61,7 @@
     <elements>
         <element name="TrainingProgram" positionX="-63" positionY="-18" width="128" height="103"/>
         <element name="TrainingDayTemplate" positionX="-54" positionY="90" width="128" height="133"/>
-        <element name="ExerciseTemplate" positionX="-36" positionY="225" width="128" height="148"/>
+        <element name="ExerciseTemplate" positionX="-36" positionY="225" width="128" height="163"/>
         <element name="TrainingSession" positionX="162" positionY="90" width="128" height="148"/>
         <element name="CompletedExercise" positionX="162" positionY="225" width="128" height="103"/>
         <element name="ExerciseSet" positionX="378" positionY="225" width="128" height="163"/>

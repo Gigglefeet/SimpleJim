@@ -8,7 +8,8 @@ struct WorkoutSessionView: View {
     let dayTemplate: TrainingDayTemplate
     @ObservedObject var trainingSession: TrainingSession
     
-    @State private var currentExerciseIndex = 0
+    @State private var currentGroupIndex = 0
+    @State private var currentExerciseInGroup = 0
     @State private var showingFinishAlert = false
     @State private var isFinishing = false
     @State private var refreshTrigger = 0
@@ -17,15 +18,113 @@ struct WorkoutSessionView: View {
     
     private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
+    // MARK: - Workout Navigation Logic
+    
+    private var exerciseGroups: [ExerciseGroup] {
+        let groups = dayTemplate.exerciseGroups
+        #if DEBUG
+        print("🏋️ Exercise groups: \(groups.count)")
+        for (index, group) in groups.enumerated() {
+            print("   Group \(index): \(group.isSuperset ? "Superset" : "Standalone"), \(group.exercises.count) exercises")
+            for exercise in group.exercises {
+                print("      - \(exercise.name ?? "Unknown") (superset group: \(exercise.supersetGroup))")
+            }
+        }
+        #endif
+        return groups
+    }
+    
+    private var currentGroup: ExerciseGroup? {
+        guard currentGroupIndex < exerciseGroups.count else { return nil }
+        return exerciseGroups[currentGroupIndex]
+    }
+    
     var currentExercise: ExerciseTemplate? {
-        let exercises = dayTemplate.sortedExerciseTemplates
-        guard currentExerciseIndex < exercises.count else { return nil }
-        return exercises[currentExerciseIndex]
+        guard let group = currentGroup else { return nil }
+        guard currentExerciseInGroup < group.exercises.count else { return nil }
+        return group.exercises[currentExerciseInGroup]
     }
     
     var completedExercise: CompletedExercise? {
         guard let currentEx = currentExercise else { return nil }
         return trainingSession.sortedCompletedExercises.first { $0.template == currentEx }
+    }
+    
+    // Smart navigation properties
+    private var isInSuperset: Bool {
+        return currentGroup?.isSuperset ?? false
+    }
+    
+    private var nextExerciseInSuperset: ExerciseTemplate? {
+        guard let group = currentGroup, group.isSuperset else { return nil }
+        let nextIndex = currentExerciseInGroup + 1
+        guard nextIndex < group.exercises.count else { return nil }
+        return group.exercises[nextIndex]
+    }
+    
+    private var canGoToPreviousExercise: Bool {
+        let canGo = currentGroupIndex > 0 || currentExerciseInGroup > 0
+        #if DEBUG
+        print("🔙 Can go to previous: \(canGo) (groupIndex: \(currentGroupIndex), exerciseInGroup: \(currentExerciseInGroup))")
+        #endif
+        return canGo
+    }
+    
+    private var canGoToNextExercise: Bool {
+        let totalGroups = exerciseGroups.count
+        
+        if let group = currentGroup, group.isSuperset {
+            // In superset: can advance if there are more exercises in the group OR more groups
+            let canGo = currentExerciseInGroup < group.exercises.count - 1 || currentGroupIndex < totalGroups - 1
+            #if DEBUG
+            print("🔜 Can go to next (superset): \(canGo) (exerciseInGroup: \(currentExerciseInGroup)/\(group.exercises.count), groupIndex: \(currentGroupIndex)/\(totalGroups))")
+            #endif
+            return canGo
+        } else {
+            // Standalone: can advance if there are more groups
+            let canGo = currentGroupIndex < totalGroups - 1
+            #if DEBUG
+            print("🔜 Can go to next (standalone): \(canGo) (groupIndex: \(currentGroupIndex)/\(totalGroups))")
+            #endif
+            return canGo
+        }
+    }
+    
+    private var nextButtonTitle: String {
+        if let nextExercise = nextExerciseInSuperset {
+            return "Next: \(nextExercise.name ?? "Exercise")"
+        } else if currentGroupIndex < exerciseGroups.count - 1 {
+            return "Next Exercise"
+        } else {
+            return "Finish Workout"
+        }
+    }
+    
+    private var workoutProgress: Double {
+        let totalGroups = Double(exerciseGroups.count)
+        guard totalGroups > 0 else { return 0 }
+        
+        let completedGroups = Double(currentGroupIndex)
+        let currentGroupProgress = if let group = currentGroup {
+            Double(currentExerciseInGroup) / Double(group.exercises.count)
+        } else {
+            0.0
+        }
+        
+        return (completedGroups + currentGroupProgress) / totalGroups
+    }
+    
+    private var progressDescription: String {
+        if let group = currentGroup {
+            if group.isSuperset {
+                let exercisePosition = currentExerciseInGroup + 1
+                let totalInGroup = group.exercises.count
+                return "\(group.displayTitle) - Exercise \(exercisePosition) of \(totalInGroup)"
+            } else {
+                return "Exercise \(currentGroupIndex + 1) of \(exerciseGroups.count)"
+            }
+        }
+        return "Loading..."
     }
     
     var body: some View {
@@ -65,16 +164,13 @@ struct WorkoutSessionView: View {
                     }
                     
                     // Progress bar
-                    if dayTemplate.sortedExerciseTemplates.count > 0 {
-                        let progress = Double(currentExerciseIndex) / Double(dayTemplate.sortedExerciseTemplates.count)
-                        Rectangle()
-                            .fill(Color.orange)
-                            .frame(width: UIScreen.main.bounds.width * 0.8 * progress, height: 8)
-                            .animation(.easeInOut, value: progress)
-                    }
+                    Rectangle()
+                        .fill(Color.orange)
+                        .frame(width: UIScreen.main.bounds.width * 0.8 * workoutProgress, height: 8)
+                        .animation(.easeInOut, value: workoutProgress)
                     
                     HStack {
-                        Text("Exercise \(currentExerciseIndex + 1) of \(dayTemplate.sortedExerciseTemplates.count)")
+                        Text(progressDescription)
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
@@ -95,8 +191,36 @@ struct WorkoutSessionView: View {
                 if let exercise = currentExercise {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Exercise info
+                            // Exercise info with superset context
                             VStack(spacing: 8) {
+                                // Superset indicator
+                                if isInSuperset, let group = currentGroup {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                            .foregroundColor(.orange)
+                                            .font(.caption)
+                                        
+                                        Text(group.displayTitle)
+                                            .font(.caption)
+                                            .bold()
+                                            .foregroundColor(.orange)
+                                        
+                                        if let label = exercise.supersetLabel {
+                                            Text(label)
+                                                .font(.caption)
+                                                .bold()
+                                                .foregroundColor(.white)
+                                                .frame(width: 20, height: 20)
+                                                .background(Color.orange)
+                                                .clipShape(Circle())
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.orange.opacity(0.2))
+                                    .cornerRadius(12)
+                                }
+                                
                                 Text(exercise.name ?? "Exercise")
                                     .font(.title)
                                     .bold()
@@ -115,6 +239,20 @@ struct WorkoutSessionView: View {
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal)
+                                }
+                                
+                                // Superset flow indicator
+                                if isInSuperset, let nextExercise = nextExerciseInSuperset {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "arrow.down")
+                                            .foregroundColor(.orange)
+                                            .font(.caption)
+                                        
+                                        Text("Next: \(nextExercise.name ?? "Exercise")")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                    .padding(.top, 4)
                                 }
                             }
                             .padding()
@@ -158,11 +296,9 @@ struct WorkoutSessionView: View {
                             
                             // Navigation buttons
                             HStack(spacing: 20) {
-                                if currentExerciseIndex > 0 {
+                                if canGoToPreviousExercise {
                                     Button("Previous") {
-                                        withAnimation {
-                                            currentExerciseIndex -= 1
-                                        }
+                                        goToPreviousExercise()
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 44)
@@ -170,15 +306,13 @@ struct WorkoutSessionView: View {
                                     .cornerRadius(10)
                                 }
                                 
-                                if currentExerciseIndex < dayTemplate.sortedExerciseTemplates.count - 1 {
-                                    Button("Next Exercise") {
-                                        withAnimation {
-                                            currentExerciseIndex += 1
-                                        }
+                                if canGoToNextExercise {
+                                    Button(nextButtonTitle) {
+                                        goToNextExercise()
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 44)
-                                    .background(Color.orange)
+                                    .background(nextExerciseInSuperset != nil ? Color.orange : (currentGroupIndex < exerciseGroups.count - 1 ? Color.orange : Color.green))
                                     .foregroundColor(.white)
                                     .cornerRadius(10)
                                 } else {
@@ -222,6 +356,45 @@ struct WorkoutSessionView: View {
             BodyweightInputView(trainingSession: trainingSession)
         }
     }
+    
+    // MARK: - Navigation Methods
+    
+    private func goToPreviousExercise() {
+        withAnimation {
+            if currentExerciseInGroup > 0 {
+                // Go to previous exercise in current group
+                currentExerciseInGroup -= 1
+            } else if currentGroupIndex > 0 {
+                // Go to previous group
+                currentGroupIndex -= 1
+                // Go to last exercise in the previous group
+                if let previousGroup = exerciseGroups[safe: currentGroupIndex] {
+                    currentExerciseInGroup = previousGroup.exercises.count - 1
+                }
+            }
+        }
+    }
+    
+    private func goToNextExercise() {
+        withAnimation {
+            if let group = currentGroup, group.isSuperset {
+                // In superset: advance within group or move to next group
+                if currentExerciseInGroup < group.exercises.count - 1 {
+                    currentExerciseInGroup += 1
+                } else {
+                    // Move to next group
+                    currentGroupIndex += 1
+                    currentExerciseInGroup = 0
+                }
+            } else {
+                // Standalone exercise: move to next group
+                currentGroupIndex += 1
+                currentExerciseInGroup = 0
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
     
     private func setupWorkoutSession() {
         #if DEBUG
@@ -379,6 +552,16 @@ struct WorkoutSessionView: View {
     }
 }
 
+// MARK: - Array Extension for Safe Access
+
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
+// MARK: - Set Row View (unchanged)
+
 struct SetRowView: View {
     @ObservedObject var set: ExerciseSet
     @State private var weightString = ""
@@ -402,7 +585,7 @@ struct SetRowView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 12) {
+            HStack {
                 // Set number
                 Text("\(setNumber)")
                     .font(.headline)
