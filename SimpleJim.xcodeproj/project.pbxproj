@@ -17,19 +17,19 @@
 		1A00103A /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001039 /* ProgramListView.swift */; };
 		1A00103C /* CreateProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103B /* CreateProgramView.swift */; };
 		1A00103E /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103D /* ProgramDetailView.swift */; };
+		1A001040 /* TrainingProgram+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103F /* TrainingProgram+Extensions.swift */; };
+		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
+		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
+		1A001046 /* CompletedExercise+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001045 /* CompletedExercise+Extensions.swift */; };
 		1A001048 /* CreateDayTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001047 /* CreateDayTemplateView.swift */; };
 		1A00104A /* DayTemplateDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001049 /* DayTemplateDetailView.swift */; };
 		1A00104C /* CreateExerciseTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104B /* CreateExerciseTemplateView.swift */; };
 		1A00104E /* WorkoutSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104D /* WorkoutSessionView.swift */; };
 		1A001050 /* SleepInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001051 /* SleepInputView.swift */; };
-		1A001057 /* NutritionInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001056 /* NutritionInputView.swift */; };
-		1A001059 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001058 /* HealthView.swift */; };
-		1A001040 /* TrainingProgram+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103F /* TrainingProgram+Extensions.swift */; };
-		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
-		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
-		1A001046 /* CompletedExercise+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001045 /* CompletedExercise+Extensions.swift */; };
 		1A001053 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A001052 /* Assets.xcassets */; };
 		1A001054 /* BodyweightInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001055 /* BodyweightInputView.swift */; };
+		1A001057 /* NutritionInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001056 /* NutritionInputView.swift */; };
+		1A001059 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001058 /* HealthView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,19 +45,19 @@
 		1A001039 /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
 		1A00103B /* CreateProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProgramView.swift; sourceTree = "<group>"; };
 		1A00103D /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramDetailView.swift; sourceTree = "<group>"; };
+		1A00103F /* TrainingProgram+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingProgram+Extensions.swift"; sourceTree = "<group>"; };
+		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
+		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
+		1A001045 /* CompletedExercise+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CompletedExercise+Extensions.swift"; sourceTree = "<group>"; };
 		1A001047 /* CreateDayTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateDayTemplateView.swift; sourceTree = "<group>"; };
 		1A001049 /* DayTemplateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTemplateDetailView.swift; sourceTree = "<group>"; };
 		1A00104B /* CreateExerciseTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateExerciseTemplateView.swift; sourceTree = "<group>"; };
 		1A00104D /* WorkoutSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionView.swift; sourceTree = "<group>"; };
 		1A001051 /* SleepInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInputView.swift; sourceTree = "<group>"; };
-		1A001056 /* NutritionInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionInputView.swift; sourceTree = "<group>"; };
-		1A001058 /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
-		1A00103F /* TrainingProgram+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingProgram+Extensions.swift"; sourceTree = "<group>"; };
-		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
-		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
-		1A001045 /* CompletedExercise+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CompletedExercise+Extensions.swift"; sourceTree = "<group>"; };
 		1A001052 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A001055 /* BodyweightInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyweightInputView.swift; sourceTree = "<group>"; };
+		1A001056 /* NutritionInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionInputView.swift; sourceTree = "<group>"; };
+		1A001058 /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,7 +210,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					1A000FFC = {
 						CreatedOnToolsVersion = 15.0;
@@ -314,6 +314,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 34427X7QNX;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -377,6 +378,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 34427X7QNX;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -405,7 +407,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 34427X7QNX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SimpleJim/Info.plist;
@@ -434,7 +435,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 34427X7QNX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SimpleJim/Info.plist;
