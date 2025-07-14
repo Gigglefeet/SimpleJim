@@ -32,14 +32,6 @@ struct WorkoutSessionView: View {
     private var exerciseGroups: [ExerciseGroup] {
         let groups = dayTemplate.exerciseGroups
         #if DEBUG
-        print("🏋️ Exercise groups: \(groups.count)")
-        print("🏋️ Day template has \(dayTemplate.sortedExerciseTemplates.count) total exercises")
-        for (index, group) in groups.enumerated() {
-            print("   Group \(index): \(group.isSuperset ? "Superset" : "Standalone"), \(group.exercises.count) exercises")
-            for (exerciseIndex, exercise) in group.exercises.enumerated() {
-                print("      [\(exerciseIndex)] \(exercise.name ?? "Unknown") (superset group: \(exercise.supersetGroup), order: \(exercise.order))")
-            }
-        }
         if groups.isEmpty {
             print("❌ WARNING: No exercise groups found!")
         }
@@ -471,33 +463,19 @@ struct WorkoutSessionView: View {
     
     private func goToNextExercise() {
         withAnimation {
-            #if DEBUG
-            print("🔜 goToNextExercise called:")
-            print("   Current state: group \(currentGroupIndex), exercise \(currentExerciseInGroup)")
-            #endif
-            
             if let group = currentGroup, group.isSuperset {
                 // In superset: advance within group or move to next group
                 if currentExerciseInGroup < group.exercises.count - 1 {
                     currentExerciseInGroup += 1
-                    #if DEBUG
-                    print("   ➡️ Advanced within superset to exercise \(currentExerciseInGroup)")
-                    #endif
                 } else {
                     // Move to next group
                     currentGroupIndex += 1
                     currentExerciseInGroup = 0
-                    #if DEBUG
-                    print("   ➡️ Advanced to next group \(currentGroupIndex)")
-                    #endif
                 }
             } else {
                 // Standalone exercise: move to next group
                 currentGroupIndex += 1
                 currentExerciseInGroup = 0
-                #if DEBUG
-                print("   ➡️ Advanced to next group \(currentGroupIndex)")
-                #endif
             }
         }
     }
@@ -505,24 +483,13 @@ struct WorkoutSessionView: View {
     // MARK: - Helper Methods
     
     private func setupWorkoutSession() {
-        #if DEBUG
-        print("Setting up workout session...")
-        #endif
-        
         // Create completed exercises for each template
         for exerciseTemplate in dayTemplate.sortedExerciseTemplates {
-            #if DEBUG
-            print("Creating completed exercise for: \(exerciseTemplate.name ?? "unknown")")
-            #endif
-            
             let completedExercise = CompletedExercise(context: viewContext)
             completedExercise.template = exerciseTemplate
             completedExercise.session = trainingSession
             
             // Create sets based on target sets
-            #if DEBUG
-            print("Creating \(exerciseTemplate.targetSets) sets")
-            #endif
             for setIndex in 0..<exerciseTemplate.targetSets {
                 let exerciseSet = ExerciseSet(context: viewContext)
                 exerciseSet.order = Int16(setIndex)
@@ -533,18 +500,11 @@ struct WorkoutSessionView: View {
                 
                 // Also add to the other side of the relationship
                 completedExercise.addToExerciseSets(exerciseSet)
-                
-                #if DEBUG
-                print("Created set \(setIndex + 1)")
-                #endif
             }
         }
         
         do {
             try viewContext.save()
-            #if DEBUG
-            print("Workout session saved successfully")
-            #endif
             
             // Refresh the training session to pick up the new relationships
             viewContext.refresh(trainingSession, mergeChanges: true)
@@ -656,33 +616,22 @@ struct WorkoutSessionView: View {
                 impactFeedback.impactOccurred()
             }
             
-            #if DEBUG
-            print("✅ Rest timer completed! Ready for next set")
-            #endif
+
         }
     }
     
     private func pauseRest() {
         restTimerActive = false
-        #if DEBUG
-        print("⏸️ Rest timer paused")
-        #endif
     }
     
     private func resetRest() {
         restTimeRemaining = defaultRestTime
         restTimerActive = true
-        #if DEBUG
-        print("🔄 Rest timer reset to \(Int(defaultRestTime))s")
-        #endif
     }
     
     private func skipRest() {
         restTimerActive = false
         restTimeRemaining = 0
-        #if DEBUG
-        print("⏭️ Rest timer skipped")
-        #endif
     }
     
     private func addSet() {
@@ -738,9 +687,6 @@ struct WorkoutSessionView: View {
         
         do {
             try viewContext.save()
-            #if DEBUG
-            print("Workout finished and saved - Duration: \(trainingSession.durationFormatted)")
-            #endif
             dismiss()
         } catch {
             #if DEBUG
@@ -754,21 +700,10 @@ struct WorkoutSessionView: View {
         let savedTime = UserDefaults.standard.double(forKey: "defaultRestTime")
         if savedTime > 0 {
             defaultRestTime = savedTime
-            #if DEBUG
-            print("Loaded default rest time from UserDefaults: \(Int(savedTime))s")
-            #endif
-        } else {
-            #if DEBUG
-            print("No default rest time found in UserDefaults, using default: \(Int(defaultRestTime))s")
-            #endif
         }
         
         // Initialize workout timer immediately
         updateWorkoutTime()
-        
-        #if DEBUG
-        print("⏱️ Live workout timer initialized")
-        #endif
     }
 }
 

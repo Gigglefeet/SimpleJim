@@ -72,11 +72,6 @@ extension TrainingDayTemplate {
     func createSuperset(from exercises: [ExerciseTemplate], in context: NSManagedObjectContext) {
         let supersetNumber = nextSupersetGroupNumber
         
-        #if DEBUG
-        print("📝 Creating superset \(supersetNumber) and reordering exercises:")
-        print("   Selected exercises: \(exercises.map { "\($0.name ?? "Unknown") (order: \($0.order))" })")
-        #endif
-        
         // Step 1: Sort the selected exercises by their current order
         let sortedSelectedExercises = exercises.sorted { $0.order < $1.order }
         
@@ -90,13 +85,6 @@ extension TrainingDayTemplate {
         
         // Step 3: Get all exercises and sort them by order
         let allExercises = sortedExerciseTemplates
-        
-        #if DEBUG
-        print("   Before reordering:")
-        for (index, exercise) in allExercises.enumerated() {
-            print("     \(index): \(exercise.name ?? "Unknown") (order: \(exercise.order))")
-        }
-        #endif
         
         // Step 4: Create new order array
         var newOrderedExercises: [ExerciseTemplate] = []
@@ -130,25 +118,11 @@ extension TrainingDayTemplate {
             // Assign superset group to selected exercises
             if exercises.contains(exercise) {
                 exercise.supersetGroup = supersetNumber
-                #if DEBUG
-                print("   ✅ \(exercise.name ?? "Unknown"): order \(index), superset \(supersetNumber)")
-                #endif
-            } else {
-                #if DEBUG
-                print("   📍 \(exercise.name ?? "Unknown"): order \(index)")
-                #endif
             }
         }
         
-        #if DEBUG
-        print("   After reordering - Superset exercises are now adjacent!")
-        #endif
-        
         do {
             try context.save()
-            #if DEBUG
-            print("✅ Superset created and reordered successfully")
-            #endif
         } catch {
             #if DEBUG
             print("❌ Failed to save superset: \(error)")
@@ -158,22 +132,12 @@ extension TrainingDayTemplate {
     
     /// Removes exercises from their superset (makes them standalone)
     func removeFromSuperset(exercises: [ExerciseTemplate], in context: NSManagedObjectContext) {
-        #if DEBUG
-        print("📝 Removing exercises from superset:")
-        #endif
-        
         for exercise in exercises {
             exercise.supersetGroup = 0
-            #if DEBUG
-            print("   - \(exercise.name ?? "Unknown"): \(exercise.supersetGroup)")
-            #endif
         }
         
         do {
             try context.save()
-            #if DEBUG
-            print("✅ Superset removal saved successfully")
-            #endif
         } catch {
             #if DEBUG
             print("❌ Failed to save superset removal: \(error)")

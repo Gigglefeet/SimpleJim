@@ -201,10 +201,6 @@ struct DayTemplateDetailView: View {
     // MARK: - Helper Methods
     
     private func createSuperset(from exercises: [ExerciseTemplate]) {
-        #if DEBUG
-        print("🎯 Creating superset from: \(exercises.map { $0.name ?? "Unknown" })")
-        #endif
-        
         // Haptic feedback for superset creation
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -215,13 +211,6 @@ struct DayTemplateDetailView: View {
             
             // Force UI refresh by updating the managed object context
             viewContext.refresh(dayTemplate, mergeChanges: true)
-            
-            #if DEBUG
-            print("✅ Superset created and reordered! Groups now: \(dayTemplate.exerciseGroups.count)")
-            for group in dayTemplate.exerciseGroups {
-                print("   - \(group.isSuperset ? "Superset" : "Standalone"): \(group.exercises.map { $0.name ?? "Unknown" })")
-            }
-            #endif
         }
         
         // Success haptic feedback after animation
@@ -232,19 +221,11 @@ struct DayTemplateDetailView: View {
     }
     
     private func breakSuperset(exercises: [ExerciseTemplate]) {
-        #if DEBUG
-        print("💥 Breaking superset: \(exercises.map { $0.name ?? "Unknown" })")
-        #endif
-        
         withAnimation(.spring()) {
             dayTemplate.removeFromSuperset(exercises: exercises, in: viewContext)
             
             // Force UI refresh
             viewContext.refresh(dayTemplate, mergeChanges: true)
-            
-            #if DEBUG
-            print("✅ Superset broken! Groups now: \(dayTemplate.exerciseGroups.count)")
-            #endif
         }
     }
     
