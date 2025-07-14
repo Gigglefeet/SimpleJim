@@ -198,38 +198,40 @@ struct DayTemplateDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.editMode, $editMode)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                if !dayTemplate.sortedExerciseTemplates.isEmpty {
-                    Button(editMode == .active ? "Done" : "Edit") {
-                        withAnimation {
-                            if editMode == .active {
-                                // Save any pending changes before exiting edit mode
-                                saveAllExerciseNames()
-                            } else {
-                                // Initialize editing state
-                                initializeEditingState()
-                            }
-                            editMode = editMode == .active ? .inactive : .active
-                        }
-                    }
-                }
-            }
-            
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    startWorkout()
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "play.circle.fill")
-                            .foregroundColor(.green)
+                HStack(spacing: 20) {
+                    if !dayTemplate.sortedExerciseTemplates.isEmpty {
+                        Button(editMode == .active ? "Done" : "Edit") {
+                            withAnimation {
+                                if editMode == .active {
+                                    // Save any pending changes before exiting edit mode
+                                    saveAllExerciseNames()
+                                } else {
+                                    // Initialize editing state
+                                    initializeEditingState()
+                                }
+                                editMode = editMode == .active ? .inactive : .active
+                            }
+                        }
+                        .foregroundColor(editMode == .active ? .orange : .blue)
+                        .disabled(dayTemplate.sortedExerciseTemplates.isEmpty)
                         
-                        // Show "Start" text on larger screens, hide on smaller ones
-                        Text("Start")
-                            .foregroundColor(.green)
-                            .font(.system(size: 16, weight: .medium))
+                        Button(action: {
+                            startWorkout()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.green)
+                                
+                                // Show "Start" text on larger screens, hide on smaller ones
+                                Text("Start")
+                                    .foregroundColor(.green)
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                        }
+                        .disabled(dayTemplate.sortedExerciseTemplates.isEmpty)
                     }
                 }
-                .disabled(dayTemplate.sortedExerciseTemplates.isEmpty || editMode == .active)
             }
         }
         .sheet(isPresented: $showingAddExercise) {
