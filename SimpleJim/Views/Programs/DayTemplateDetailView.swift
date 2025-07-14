@@ -12,6 +12,8 @@ struct DayTemplateDetailView: View {
     @State private var draggedExercise: ExerciseTemplate?
     @State private var dragTargetExercise: ExerciseTemplate?
     @State private var showingSupersetHint = false
+    @State private var editMode = EditMode.inactive
+    @State private var editingExerciseNames: [String: String] = [:]
     
     var body: some View {
         List {
@@ -77,100 +79,142 @@ struct DayTemplateDetailView: View {
             } else {
                 // Exercise groups (standalone and supersets)
                 Section("Exercises") {
-                    ForEach(dayTemplate.exerciseGroups) { group in
-                        if group.isSuperset {
-                            SupersetGroupView(
-                                group: group,
-                                draggedExercise: $draggedExercise,
-                                dragTargetExercise: $dragTargetExercise,
-                                onBreakSuperset: { exercises in
-                                    breakSuperset(exercises: exercises)
+                    if editMode == .active {
+                        // In edit mode, show flat list of exercises for reordering
+                        ForEach(dayTemplate.sortedExerciseTemplates) { exercise in
+                            EditableExerciseRowView(
+                                exercise: exercise,
+                                editingName: Binding(
+                                    get: { editingExerciseNames[exercise.objectID.uriRepresentation().absoluteString] ?? exercise.name ?? "" },
+                                    set: { editingExerciseNames[exercise.objectID.uriRepresentation().absoluteString] = $0 }
+                                ),
+                                onSave: { newName in
+                                    saveExerciseName(exercise: exercise, newName: newName)
                                 }
                             )
-                        } else {
-                            ForEach(group.exercises, id: \.objectID) { exercise in
-                                ExerciseTemplateRowView(
-                                    exerciseTemplate: exercise,
+                        }
+                        .onMove(perform: moveExercises)
+                        .onDelete(perform: deleteExercises)
+                    } else {
+                        // Normal mode, show grouped exercises
+                        ForEach(dayTemplate.exerciseGroups) { group in
+                            if group.isSuperset {
+                                SupersetGroupView(
+                                    group: group,
                                     draggedExercise: $draggedExercise,
                                     dragTargetExercise: $dragTargetExercise,
-                                    onCreateSuperset: { exercise1, exercise2 in
-                                        createSuperset(from: [exercise1, exercise2])
+                                    onBreakSuperset: { exercises in
+                                        breakSuperset(exercises: exercises)
                                     }
                                 )
+                            } else {
+                                ForEach(group.exercises, id: \.objectID) { exercise in
+                                    ExerciseTemplateRowView(
+                                        exerciseTemplate: exercise,
+                                        draggedExercise: $draggedExercise,
+                                        dragTargetExercise: $dragTargetExercise,
+                                        onCreateSuperset: { exercise1, exercise2 in
+                                            createSuperset(from: [exercise1, exercise2])
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                     
-                    // Add exercise button
-                    Button(action: {
-                        showingAddExercise = true
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle")
-                                .foregroundColor(.orange)
-                            Text("Add Exercise")
-                                .foregroundColor(.primary)
+                    // Hide add button in edit mode
+                    if editMode == .inactive {
+                        Button(action: {
+                            showingAddExercise = true
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(.orange)
+                                Text("Add Exercise")
+                                    .foregroundColor(.primary)
+                            }
                         }
                     }
                 }
                 
-                // Superset help section
-                if dayTemplate.totalExercises >= 2 && !dayTemplate.exerciseGroups.contains(where: { $0.isSuperset }) {
-                    Section {
-                        VStack(spacing: 8) {
+                // Hide superset help and actions sections in edit mode
+                if editMode == .inactive {
+                    // Superset help section
+                    if dayTemplate.totalExercises >= 2 && !dayTemplate.exerciseGroups.contains(where: { $0.isSuperset }) {
+                        Section {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .foregroundColor(.blue)
+                                        .font(.title2)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Create Supersets")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("Tap an exercise to select it, then tap another to create a superset")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    
+                    // Quick actions
+                    Section("Actions") {
+                        Button(action: {
+                            startWorkout()
+                        }) {
                             HStack {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .foregroundColor(.blue)
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.green)
                                     .font(.title2)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Create Supersets")
+                                    Text("Start Workout")
                                         .font(.headline)
                                         .foregroundColor(.primary)
                                     
-                                    Text("Tap an exercise to select it, then tap another to create a superset")
+                                    Text("Begin a training session from this template")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
                                 
                                 Spacer()
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 8)
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                }
-                
-                // Quick actions
-                Section("Actions") {
-                    Button(action: {
-                        startWorkout()
-                    }) {
-                        HStack {
-                            Image(systemName: "play.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.title2)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Start Workout")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                
-                                Text("Begin a training session from this template")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }
         .navigationTitle("Training Day")
         .navigationBarTitleDisplayMode(.inline)
+        .environment(\.editMode, $editMode)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if !dayTemplate.sortedExerciseTemplates.isEmpty {
+                    Button(editMode == .active ? "Done" : "Edit") {
+                        withAnimation {
+                            if editMode == .active {
+                                // Save any pending changes before exiting edit mode
+                                saveAllExerciseNames()
+                            } else {
+                                // Initialize editing state
+                                initializeEditingState()
+                            }
+                            editMode = editMode == .active ? .inactive : .active
+                        }
+                    }
+                }
+            }
+            
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     startWorkout()
@@ -185,7 +229,7 @@ struct DayTemplateDetailView: View {
                             .font(.system(size: 16, weight: .medium))
                     }
                 }
-                .disabled(dayTemplate.sortedExerciseTemplates.isEmpty)
+                .disabled(dayTemplate.sortedExerciseTemplates.isEmpty || editMode == .active)
             }
         }
         .sheet(isPresented: $showingAddExercise) {
@@ -199,6 +243,88 @@ struct DayTemplateDetailView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func initializeEditingState() {
+        // Initialize exercise names
+        editingExerciseNames.removeAll()
+        for exercise in dayTemplate.sortedExerciseTemplates {
+            let key = exercise.objectID.uriRepresentation().absoluteString
+            editingExerciseNames[key] = exercise.name ?? ""
+        }
+    }
+    
+    private func saveExerciseName(exercise: ExerciseTemplate, newName: String) {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty && trimmedName != exercise.name {
+            exercise.name = trimmedName
+            
+            do {
+                try viewContext.save()
+            } catch {
+                print("Failed to save exercise name: \(error)")
+                // Revert on error
+                let key = exercise.objectID.uriRepresentation().absoluteString
+                editingExerciseNames[key] = exercise.name ?? ""
+            }
+        }
+    }
+    
+    private func saveAllExerciseNames() {
+        for exercise in dayTemplate.sortedExerciseTemplates {
+            let key = exercise.objectID.uriRepresentation().absoluteString
+            if let editingName = editingExerciseNames[key] {
+                saveExerciseName(exercise: exercise, newName: editingName)
+            }
+        }
+    }
+    
+    private func moveExercises(from source: IndexSet, to destination: Int) {
+        withAnimation {
+            var exercises = dayTemplate.sortedExerciseTemplates
+            exercises.move(fromOffsets: source, toOffset: destination)
+            
+            // Update the order in Core Data
+            for (index, exercise) in exercises.enumerated() {
+                exercise.order = Int16(index)
+            }
+            
+            do {
+                try viewContext.save()
+                // Force UI refresh
+                viewContext.refresh(dayTemplate, mergeChanges: true)
+            } catch {
+                print("Failed to reorder exercises: \(error)")
+            }
+        }
+    }
+    
+    private func deleteExercises(offsets: IndexSet) {
+        withAnimation {
+            let exercises = dayTemplate.sortedExerciseTemplates
+            
+            // Delete the selected exercises
+            for index in offsets {
+                viewContext.delete(exercises[index])
+            }
+            
+            // Reorder the remaining exercises
+            let remainingExercises = exercises.enumerated().compactMap { (idx, exercise) -> ExerciseTemplate? in
+                return offsets.contains(idx) ? nil : exercise
+            }
+            
+            for (index, exercise) in remainingExercises.enumerated() {
+                exercise.order = Int16(index)
+            }
+            
+            do {
+                try viewContext.save()
+                // Force UI refresh
+                viewContext.refresh(dayTemplate, mergeChanges: true)
+            } catch {
+                print("Failed to delete exercises: \(error)")
+            }
+        }
+    }
     
     private func createSuperset(from exercises: [ExerciseTemplate]) {
         // Haptic feedback for superset creation
@@ -562,6 +688,60 @@ struct ExerciseTemplateRowView: View {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
+    }
+}
+
+// MARK: - Editable Exercise Row
+
+struct EditableExerciseRowView: View {
+    let exercise: ExerciseTemplate
+    @Binding var editingName: String
+    let onSave: (String) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                // Editable exercise name
+                TextField("Exercise name", text: $editingName)
+                    .font(.headline)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .onSubmit {
+                        onSave(editingName)
+                    }
+                
+                Spacer()
+                
+                Text(exercise.muscleGroup ?? "")
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.2))
+                    .cornerRadius(8)
+            }
+            
+            if let notes = exercise.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            
+            HStack {
+                Label("\(exercise.targetSets) sets", systemImage: "number.circle")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text("Exercise \(exercise.order + 1)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(10)
     }
 }
 
