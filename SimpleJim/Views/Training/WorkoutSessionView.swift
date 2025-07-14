@@ -15,6 +15,7 @@ struct WorkoutSessionView: View {
     @State private var refreshTrigger = 0
     @State private var showingSleepInput = false
     @State private var showingBodyweightInput = false
+    @State private var showingNutritionInput = false
     @State private var workoutElapsedTime: TimeInterval = 0
     
     // Rest Timer State
@@ -182,6 +183,15 @@ struct WorkoutSessionView: View {
                             }) {
                                 Image(systemName: trainingSession.sleepHours > 0 ? "moon.stars.fill" : "moon.stars")
                                     .foregroundColor(trainingSession.sleepHours > 0 ? .blue : .gray)
+                                    .font(.title2)
+                            }
+                            
+                            // Previous day nutrition button
+                            Button(action: {
+                                showingNutritionInput = true
+                            }) {
+                                Image(systemName: trainingSession.proteinGrams > 0 ? "fork.knife.circle.fill" : "fork.knife.circle")
+                                    .foregroundColor(trainingSession.proteinGrams > 0 ? .green : .gray)
                                     .font(.title2)
                             }
                             
@@ -410,6 +420,9 @@ struct WorkoutSessionView: View {
         }
         .sheet(isPresented: $showingSleepInput) {
             SleepInputView(trainingSession: trainingSession)
+        }
+        .sheet(isPresented: $showingNutritionInput) {
+            NutritionInputView(trainingSession: trainingSession)
         }
         .sheet(isPresented: $showingBodyweightInput) {
             BodyweightInputView(trainingSession: trainingSession)

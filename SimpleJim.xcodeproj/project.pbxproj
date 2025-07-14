@@ -22,6 +22,7 @@
 		1A00104C /* CreateExerciseTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104B /* CreateExerciseTemplateView.swift */; };
 		1A00104E /* WorkoutSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104D /* WorkoutSessionView.swift */; };
 		1A001050 /* SleepInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001051 /* SleepInputView.swift */; };
+		1A001057 /* NutritionInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001056 /* NutritionInputView.swift */; };
 		1A001040 /* TrainingProgram+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103F /* TrainingProgram+Extensions.swift */; };
 		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
 		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
@@ -48,6 +49,7 @@
 		1A00104B /* CreateExerciseTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateExerciseTemplateView.swift; sourceTree = "<group>"; };
 		1A00104D /* WorkoutSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionView.swift; sourceTree = "<group>"; };
 		1A001051 /* SleepInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInputView.swift; sourceTree = "<group>"; };
+		1A001056 /* NutritionInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionInputView.swift; sourceTree = "<group>"; };
 		1A00103F /* TrainingProgram+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingProgram+Extensions.swift"; sourceTree = "<group>"; };
 		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
 		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
@@ -134,6 +136,7 @@
 				1A001019 /* AddExerciseView.swift */,
 				1A00104D /* WorkoutSessionView.swift */,
 				1A001051 /* SleepInputView.swift */,
+				1A001056 /* NutritionInputView.swift */,
 				1A001055 /* BodyweightInputView.swift */,
 			);
 			path = Training;
@@ -256,6 +259,7 @@
 				1A00104C /* CreateExerciseTemplateView.swift in Sources */,
 				1A00104E /* WorkoutSessionView.swift in Sources */,
 				1A001050 /* SleepInputView.swift in Sources */,
+				1A001057 /* NutritionInputView.swift in Sources */,
 				1A001054 /* BodyweightInputView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
