@@ -23,29 +23,39 @@ extension TrainingDayTemplate {
     var exerciseGroups: [ExerciseGroup] {
         let exercises = sortedExerciseTemplates
         var groups: [ExerciseGroup] = []
-        var currentGroup: [ExerciseTemplate] = []
-        var currentSupersetGroup: Int16? = nil
+        var currentSupersetGroup: [ExerciseTemplate] = []
+        var currentSupersetNumber: Int16? = nil
         
         for exercise in exercises {
             let exerciseSupersetGroup = exercise.supersetGroup == 0 ? nil : exercise.supersetGroup
             
-            if exerciseSupersetGroup != currentSupersetGroup {
-                // Finish current group if exists
-                if !currentGroup.isEmpty {
-                    let groupType: ExerciseGroupType = currentSupersetGroup == nil ? .standalone : .superset
-                    groups.append(ExerciseGroup(exercises: currentGroup, type: groupType, supersetNumber: currentSupersetGroup))
-                    currentGroup = []
+            if exerciseSupersetGroup == nil {
+                // Standalone exercise: create individual group
+                if !currentSupersetGroup.isEmpty {
+                    // Finish previous superset first
+                    groups.append(ExerciseGroup(exercises: currentSupersetGroup, type: .superset, supersetNumber: currentSupersetNumber))
+                    currentSupersetGroup = []
+                    currentSupersetNumber = nil
                 }
-                currentSupersetGroup = exerciseSupersetGroup
+                // Create standalone group with just this exercise
+                groups.append(ExerciseGroup(exercises: [exercise], type: .standalone, supersetNumber: nil))
+            } else {
+                // Superset exercise
+                if currentSupersetNumber != exerciseSupersetGroup {
+                    // Finish previous superset if exists
+                    if !currentSupersetGroup.isEmpty {
+                        groups.append(ExerciseGroup(exercises: currentSupersetGroup, type: .superset, supersetNumber: currentSupersetNumber))
+                        currentSupersetGroup = []
+                    }
+                    currentSupersetNumber = exerciseSupersetGroup
+                }
+                currentSupersetGroup.append(exercise)
             }
-            
-            currentGroup.append(exercise)
         }
         
-        // Add the last group
-        if !currentGroup.isEmpty {
-            let groupType: ExerciseGroupType = currentSupersetGroup == nil ? .standalone : .superset
-            groups.append(ExerciseGroup(exercises: currentGroup, type: groupType, supersetNumber: currentSupersetGroup))
+        // Add the last superset group if exists
+        if !currentSupersetGroup.isEmpty {
+            groups.append(ExerciseGroup(exercises: currentSupersetGroup, type: .superset, supersetNumber: currentSupersetNumber))
         }
         
         return groups

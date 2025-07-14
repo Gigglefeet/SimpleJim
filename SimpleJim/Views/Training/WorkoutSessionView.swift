@@ -33,11 +33,15 @@ struct WorkoutSessionView: View {
         let groups = dayTemplate.exerciseGroups
         #if DEBUG
         print("🏋️ Exercise groups: \(groups.count)")
+        print("🏋️ Day template has \(dayTemplate.sortedExerciseTemplates.count) total exercises")
         for (index, group) in groups.enumerated() {
             print("   Group \(index): \(group.isSuperset ? "Superset" : "Standalone"), \(group.exercises.count) exercises")
-            for exercise in group.exercises {
-                print("      - \(exercise.name ?? "Unknown") (superset group: \(exercise.supersetGroup))")
+            for (exerciseIndex, exercise) in group.exercises.enumerated() {
+                print("      [\(exerciseIndex)] \(exercise.name ?? "Unknown") (superset group: \(exercise.supersetGroup), order: \(exercise.order))")
             }
+        }
+        if groups.isEmpty {
+            print("❌ WARNING: No exercise groups found!")
         }
         #endif
         return groups
@@ -82,18 +86,33 @@ struct WorkoutSessionView: View {
     private var canGoToNextExercise: Bool {
         let totalGroups = exerciseGroups.count
         
+        #if DEBUG
+        print("🔍 Debugging canGoToNextExercise:")
+        print("   Current group index: \(currentGroupIndex)")
+        print("   Current exercise in group: \(currentExerciseInGroup)")
+        print("   Total groups: \(totalGroups)")
+        #endif
+        
         if let group = currentGroup, group.isSuperset {
             // In superset: can advance if there are more exercises in the group OR more groups
-            let canGo = currentExerciseInGroup < group.exercises.count - 1 || currentGroupIndex < totalGroups - 1
+            let hasMoreInGroup = currentExerciseInGroup < group.exercises.count - 1
+            let hasMoreGroups = currentGroupIndex < totalGroups - 1
+            let canGo = hasMoreInGroup || hasMoreGroups
             #if DEBUG
-            print("🔜 Can go to next (superset): \(canGo) (exerciseInGroup: \(currentExerciseInGroup)/\(group.exercises.count), groupIndex: \(currentGroupIndex)/\(totalGroups))")
+            print("🔜 Can go to next (superset): \(canGo)")
+            print("   - More in group: \(hasMoreInGroup) (\(currentExerciseInGroup)/\(group.exercises.count))")
+            print("   - More groups: \(hasMoreGroups) (\(currentGroupIndex)/\(totalGroups))")
             #endif
             return canGo
         } else {
-            // Standalone: can advance if there are more groups
+            // Standalone exercise: can advance if there are more groups
             let canGo = currentGroupIndex < totalGroups - 1
             #if DEBUG
-            print("🔜 Can go to next (standalone): \(canGo) (groupIndex: \(currentGroupIndex)/\(totalGroups))")
+            print("🔜 Can go to next (standalone): \(canGo)")
+            print("   - More groups: \(canGo) (\(currentGroupIndex)/\(totalGroups))")
+            if let currentGroup = currentGroup {
+                print("   - Current group has \(currentGroup.exercises.count) exercises")
+            }
             #endif
             return canGo
         }
@@ -452,19 +471,33 @@ struct WorkoutSessionView: View {
     
     private func goToNextExercise() {
         withAnimation {
+            #if DEBUG
+            print("🔜 goToNextExercise called:")
+            print("   Current state: group \(currentGroupIndex), exercise \(currentExerciseInGroup)")
+            #endif
+            
             if let group = currentGroup, group.isSuperset {
                 // In superset: advance within group or move to next group
                 if currentExerciseInGroup < group.exercises.count - 1 {
                     currentExerciseInGroup += 1
+                    #if DEBUG
+                    print("   ➡️ Advanced within superset to exercise \(currentExerciseInGroup)")
+                    #endif
                 } else {
                     // Move to next group
                     currentGroupIndex += 1
                     currentExerciseInGroup = 0
+                    #if DEBUG
+                    print("   ➡️ Advanced to next group \(currentGroupIndex)")
+                    #endif
                 }
             } else {
                 // Standalone exercise: move to next group
                 currentGroupIndex += 1
                 currentExerciseInGroup = 0
+                #if DEBUG
+                print("   ➡️ Advanced to next group \(currentGroupIndex)")
+                #endif
             }
         }
     }

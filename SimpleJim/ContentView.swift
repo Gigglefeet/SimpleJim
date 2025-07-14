@@ -21,12 +21,19 @@ struct ContentView: View {
                 }
                 .tag(1)
             
+            HealthView()
+                .tabItem {
+                    Image(systemName: "heart.text.square.fill")
+                    Text("Health")
+                }
+                .tag(2)
+            
             ProfileView()
                 .tabItem {
                     Image(systemName: "person.fill")
                     Text("Profile")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(.orange)
     }

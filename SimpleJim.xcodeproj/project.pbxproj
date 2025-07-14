@@ -23,6 +23,7 @@
 		1A00104E /* WorkoutSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00104D /* WorkoutSessionView.swift */; };
 		1A001050 /* SleepInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001051 /* SleepInputView.swift */; };
 		1A001057 /* NutritionInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001056 /* NutritionInputView.swift */; };
+		1A001059 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001058 /* HealthView.swift */; };
 		1A001040 /* TrainingProgram+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103F /* TrainingProgram+Extensions.swift */; };
 		1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001041 /* TrainingDayTemplate+Extensions.swift */; };
 		1A001044 /* TrainingSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001043 /* TrainingSession+Extensions.swift */; };
@@ -50,6 +51,7 @@
 		1A00104D /* WorkoutSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionView.swift; sourceTree = "<group>"; };
 		1A001051 /* SleepInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepInputView.swift; sourceTree = "<group>"; };
 		1A001056 /* NutritionInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionInputView.swift; sourceTree = "<group>"; };
+		1A001058 /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
 		1A00103F /* TrainingProgram+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingProgram+Extensions.swift"; sourceTree = "<group>"; };
 		1A001041 /* TrainingDayTemplate+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingDayTemplate+Extensions.swift"; sourceTree = "<group>"; };
 		1A001043 /* TrainingSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TrainingSession+Extensions.swift"; sourceTree = "<group>"; };
@@ -125,6 +127,7 @@
 				1A001027 /* Programs */,
 				1A00100E /* Training */,
 				1A001025 /* Progress */,
+				1A001060 /* Health */,
 				1A001026 /* Profile */,
 			);
 			path = Views;
@@ -169,6 +172,14 @@
 				1A00104B /* CreateExerciseTemplateView.swift */,
 			);
 			path = Programs;
+			sourceTree = "<group>";
+		};
+		1A001060 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				1A001058 /* HealthView.swift */,
+			);
+			path = Health;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -260,6 +271,7 @@
 				1A00104E /* WorkoutSessionView.swift in Sources */,
 				1A001050 /* SleepInputView.swift in Sources */,
 				1A001057 /* NutritionInputView.swift in Sources */,
+				1A001059 /* HealthView.swift in Sources */,
 				1A001054 /* BodyweightInputView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
