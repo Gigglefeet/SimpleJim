@@ -170,6 +170,24 @@ struct DayTemplateDetailView: View {
         }
         .navigationTitle("Training Day")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    startWorkout()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.circle.fill")
+                            .foregroundColor(.green)
+                        
+                        // Show "Start" text on larger screens, hide on smaller ones
+                        Text("Start")
+                            .foregroundColor(.green)
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                }
+                .disabled(dayTemplate.sortedExerciseTemplates.isEmpty)
+            }
+        }
         .sheet(isPresented: $showingAddExercise) {
             CreateExerciseTemplateView(dayTemplate: dayTemplate)
         }
