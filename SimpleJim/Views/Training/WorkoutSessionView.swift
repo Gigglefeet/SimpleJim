@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import Combine
 
 struct WorkoutSessionView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -24,8 +25,11 @@ struct WorkoutSessionView: View {
     @State private var defaultRestTime: TimeInterval = 90 // 90 seconds default
     @State private var showingRestSettings = false
     
-    private let workoutTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    private let restTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    // Timer cancellation tokens to prevent memory leaks
+    @State private var workoutTimerCancellable: AnyCancellable?
+    @State private var restTimerCancellable: AnyCancellable?
+    
+    // Timers are now managed through cancellable tokens for proper cleanup
     
     // MARK: - Workout Navigation Logic
     
@@ -365,9 +369,6 @@ struct WorkoutSessionView: View {
                                     }
                                 )
                                 .padding()
-                                .onReceive(restTimer) { _ in
-                                    updateRestTimer()
-                                }
                             }
                             
                             // Navigation buttons
@@ -417,9 +418,7 @@ struct WorkoutSessionView: View {
         .onAppear {
             setupWorkoutSession()
             loadRestTimerSettings()
-        }
-        .onReceive(workoutTimer) { _ in
-            updateWorkoutTime()
+            startTimers()
         }
         .alert("Finish Workout?", isPresented: $showingFinishAlert) {
             Button("Cancel", role: .cancel) { }
@@ -440,6 +439,10 @@ struct WorkoutSessionView: View {
         }
         .sheet(isPresented: $showingRestSettings) {
             RestTimerSettingsView(defaultRestTime: $defaultRestTime)
+        }
+        .onDisappear {
+            workoutTimerCancellable?.cancel()
+            restTimerCancellable?.cancel()
         }
     }
     
@@ -705,6 +708,22 @@ struct WorkoutSessionView: View {
         // Initialize workout timer immediately
         updateWorkoutTime()
     }
+    
+    private func startTimers() {
+        // Start workout timer
+        workoutTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                updateWorkoutTime()
+            }
+        
+        // Start rest timer
+        restTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                updateRestTimer()
+            }
+    }
 }
 
 // MARK: - Array Extension for Safe Access
@@ -722,6 +741,8 @@ struct SetRowView: View {
     @State private var weightString = ""
     @State private var repsString = ""
     @State private var saveWorkItem: DispatchWorkItem?
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -867,6 +888,11 @@ struct SetRowView: View {
             updateWeightDisplay()
             repsString = set.reps > 0 ? String(set.reps) : ""
         }
+        .alert("Save Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     private func updateWeightDisplay() {
@@ -911,6 +937,10 @@ struct SetRowView: View {
             #if DEBUG
             print("Error saving set: \(error)")
             #endif
+            
+            // Show user-friendly error message
+            errorMessage = "Failed to save your set data. Please try again."
+            showingErrorAlert = true
         }
     }
 }
