@@ -721,6 +721,7 @@ struct SetRowView: View {
     @ObservedObject var set: ExerciseSet
     @State private var weightString = ""
     @State private var repsString = ""
+    @State private var saveWorkItem: DispatchWorkItem?
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -770,7 +771,7 @@ struct SetRowView: View {
                                 weightString = ""
                             }
                             updateCompletionStatus()
-                            saveContext()
+                            debouncedSave()
                         }
                     ))
                     .toggleStyle(SwitchToggleStyle())
@@ -788,13 +789,18 @@ struct SetRowView: View {
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
                         .onChange(of: weightString) { newValue in
-                            // Input validation: only allow positive numbers up to 999.9
+                            // Clean input validation without causing state updates
                             let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
+                            
+                            // Only update if filtering actually changed something
                             if filteredValue != newValue {
-                                weightString = filteredValue
+                                DispatchQueue.main.async {
+                                    weightString = filteredValue
+                                }
                                 return
                             }
                             
+                            // Update Core Data model
                             let weightValue = min(Double(filteredValue) ?? 0, 999.9)
                             if set.isBodyweight {
                                 set.extraWeight = weightValue
@@ -802,7 +808,7 @@ struct SetRowView: View {
                                 set.weight = weightValue
                             }
                             updateCompletionStatus()
-                            saveContext()
+                            debouncedSave()
                         }
                 }
                 
@@ -821,17 +827,22 @@ struct SetRowView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 60)
                         .onChange(of: repsString) { newValue in
-                            // Input validation: only allow numbers up to 999
+                            // Clean input validation without causing state updates
                             let filteredValue = newValue.filter { $0.isNumber }
+                            
+                            // Only update if filtering actually changed something
                             if filteredValue != newValue {
-                                repsString = filteredValue
+                                DispatchQueue.main.async {
+                                    repsString = filteredValue
+                                }
                                 return
                             }
                             
+                            // Update Core Data model
                             let repsValue = min(Int(filteredValue) ?? 0, 999)
                             set.reps = Int16(repsValue)
                             updateCompletionStatus()
-                            saveContext()
+                            debouncedSave()
                         }
                 }
                 
@@ -878,6 +889,19 @@ struct SetRowView: View {
             #endif
             onSetCompleted?()
         }
+    }
+    
+    private func debouncedSave() {
+        // Cancel previous save work item
+        saveWorkItem?.cancel()
+        
+        // Create new work item with 0.5 second delay
+        saveWorkItem = DispatchWorkItem {
+            saveContext()
+        }
+        
+        // Schedule the work item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: saveWorkItem!)
     }
     
     private func saveContext() {
