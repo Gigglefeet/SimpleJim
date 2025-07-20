@@ -12,6 +12,8 @@ struct CreateExerciseTemplateView: View {
     @State private var targetSets = 3
     @State private var notes = ""
     @State private var isCreating = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     let muscleGroups = [
         "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", 
@@ -98,6 +100,11 @@ struct CreateExerciseTemplateView: View {
                 }
             }
         }
+        .alert("Error", isPresented: $showingErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     private func createExerciseTemplate() {
@@ -121,8 +128,11 @@ struct CreateExerciseTemplateView: View {
             #if DEBUG
             print("Failed to create exercise template: \(error.localizedDescription)")
             #endif
+            
+            // Show user-friendly error message
+            errorMessage = "Failed to create exercise template. Please try again."
+            showingErrorAlert = true
             isCreating = false
-            // TODO: Show error alert to user
         }
     }
 }

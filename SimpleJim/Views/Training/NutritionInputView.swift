@@ -8,6 +8,9 @@ struct NutritionInputView: View {
     @ObservedObject var trainingSession: TrainingSession
     @State private var proteinGrams: Double
     @State private var nutritionQuality: NutritionQuality = .good
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
+    @State private var isSaving = false
     
     // Get user's protein goal from profile settings
     @AppStorage("proteinGoal") private var proteinGoal: Double = 150.0
@@ -172,14 +175,23 @@ struct NutritionInputView: View {
                 
                 // Save Button
                 Button(action: saveNutrition) {
-                    Text("Save Nutrition Data")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.green)
-                        .cornerRadius(12)
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .foregroundColor(.white)
+                        }
+                        
+                        Text(isSaving ? "Saving..." : "Save Nutrition Data")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(isSaving ? Color.green.opacity(0.6) : Color.green)
+                    .cornerRadius(12)
                 }
+                .disabled(isSaving)
                 .padding(.horizontal)
             }
             .padding()
@@ -191,6 +203,11 @@ struct NutritionInputView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert("Save Error", isPresented: $showingErrorAlert) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
             }
         }
     }
@@ -215,6 +232,7 @@ struct NutritionInputView: View {
     }
     
     private func saveNutrition() {
+        isSaving = true
         trainingSession.proteinGrams = proteinGrams
         
         do {
@@ -227,6 +245,11 @@ struct NutritionInputView: View {
             #if DEBUG
             print("Error saving nutrition data: \(error)")
             #endif
+            
+            // Show user-friendly error message
+            errorMessage = "Failed to save your nutrition data. Please try again."
+            showingErrorAlert = true
+            isSaving = false
         }
     }
 }

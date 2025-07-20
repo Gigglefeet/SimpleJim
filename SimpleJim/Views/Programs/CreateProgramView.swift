@@ -10,6 +10,7 @@ struct CreateProgramView: View {
     @State private var programNotes = ""
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
+    @State private var isCreating = false
     
     var body: some View {
         NavigationView {
@@ -42,10 +43,17 @@ struct CreateProgramView: View {
                 }
                 
                 Section {
-                    Button("Create Program") {
-                        createProgram()
+                    Button(action: createProgram) {
+                        HStack {
+                            if isCreating {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            
+                            Text(isCreating ? "Creating..." : "Create Program")
+                        }
                     }
-                    .disabled(programName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(programName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
                 }
             }
             .navigationTitle("New Program")
@@ -66,6 +74,8 @@ struct CreateProgramView: View {
     }
     
     private func createProgram() {
+        isCreating = true
+        
         withAnimation {
             let newProgram = TrainingProgram(context: viewContext)
             newProgram.name = programName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -79,6 +89,7 @@ struct CreateProgramView: View {
                 os_log("Failed to create program: %@", log: .default, type: .error, error.localizedDescription)
                 errorMessage = "Failed to create program. Please try again."
                 showingErrorAlert = true
+                isCreating = false
             }
         }
     }

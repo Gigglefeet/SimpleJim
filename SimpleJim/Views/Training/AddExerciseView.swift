@@ -11,6 +11,8 @@ struct AddExerciseView: View {
     @State private var selectedMuscleGroup = "Chest"
     @State private var exerciseNotes = ""
     @State private var targetSets: Int = 3
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     private let muscleGroups = [
         "Chest", "Back", "Shoulders", "Arms", "Legs", "Core", "Cardio", "Other"
@@ -57,6 +59,11 @@ struct AddExerciseView: View {
                     }
                 }
             }
+            .alert("Error", isPresented: $showingErrorAlert) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
@@ -74,11 +81,13 @@ struct AddExerciseView: View {
                 try viewContext.save()
                 dismiss()
             } catch {
-                // Log error and continue - user will see the exercise wasn't added
                 #if DEBUG
                 print("Failed to save exercise template: \(error.localizedDescription)")
                 #endif
-                // TODO: Show error alert to user
+                
+                // Show user-friendly error message
+                errorMessage = "Failed to save exercise template. Please try again."
+                showingErrorAlert = true
             }
         }
     }

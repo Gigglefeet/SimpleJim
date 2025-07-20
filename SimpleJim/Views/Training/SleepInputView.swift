@@ -8,6 +8,9 @@ struct SleepInputView: View {
     @ObservedObject var trainingSession: TrainingSession
     @State private var sleepHours: Double
     @State private var sleepQuality: SleepQuality = .good
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
+    @State private var isSaving = false
     
     enum SleepQuality: String, CaseIterable {
         case poor = "Poor"
@@ -164,14 +167,23 @@ struct SleepInputView: View {
                 
                 // Save Button
                 Button(action: saveSleep) {
-                    Text("Save Sleep Data")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.blue)
-                        .cornerRadius(12)
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .foregroundColor(.white)
+                        }
+                        
+                        Text(isSaving ? "Saving..." : "Save Sleep Data")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(isSaving ? Color.blue.opacity(0.6) : Color.blue)
+                    .cornerRadius(12)
                 }
+                .disabled(isSaving)
                 .padding(.horizontal)
             }
             .padding()
@@ -183,6 +195,11 @@ struct SleepInputView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert("Save Error", isPresented: $showingErrorAlert) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
             }
         }
     }
@@ -207,6 +224,7 @@ struct SleepInputView: View {
     }
     
     private func saveSleep() {
+        isSaving = true
         trainingSession.sleepHours = sleepHours
         
         do {
@@ -219,6 +237,11 @@ struct SleepInputView: View {
             #if DEBUG
             print("Error saving sleep data: \(error)")
             #endif
+            
+            // Show user-friendly error message
+            errorMessage = "Failed to save your sleep data. Please try again."
+            showingErrorAlert = true
+            isSaving = false
         }
     }
 }

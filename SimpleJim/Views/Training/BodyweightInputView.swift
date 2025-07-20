@@ -8,6 +8,9 @@ struct BodyweightInputView: View {
     @ObservedObject var trainingSession: TrainingSession
     @State private var bodyweight: Double
     @State private var bodyweightString: String
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
+    @State private var isSaving = false
     
     init(trainingSession: TrainingSession) {
         self.trainingSession = trainingSession
@@ -82,15 +85,24 @@ struct BodyweightInputView: View {
                 
                 Spacer()
                 
-                Button("Save Bodyweight") {
-                    saveBodyweight()
+                Button(action: saveBodyweight) {
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .foregroundColor(.white)
+                        }
+                        
+                        Text(isSaving ? "Saving..." : "Save Bodyweight")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(isSaving ? Color.orange.opacity(0.6) : Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .font(.headline)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.orange)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .font(.headline)
+                .disabled(isSaving)
             }
             .padding()
             .navigationTitle("Bodyweight")
@@ -102,10 +114,16 @@ struct BodyweightInputView: View {
                     }
                 }
             }
+            .alert("Save Error", isPresented: $showingErrorAlert) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
     private func saveBodyweight() {
+        isSaving = true
         trainingSession.userBodyweight = bodyweight
         
         do {
@@ -118,6 +136,11 @@ struct BodyweightInputView: View {
             #if DEBUG
             print("Error saving bodyweight: \(error)")
             #endif
+            
+            // Show user-friendly error message
+            errorMessage = "Failed to save your bodyweight. Please try again."
+            showingErrorAlert = true
+            isSaving = false
         }
     }
 }
