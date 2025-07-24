@@ -13,7 +13,7 @@ struct WorkoutSessionView: View {
     @State private var currentExerciseInGroup = 0
     @State private var showingFinishAlert = false
     @State private var isFinishing = false
-    @State private var refreshTrigger = 0
+    // @State private var refreshTrigger = 0 // REMOVED - was causing unnecessary UI refreshes
     @State private var showingSleepInput = false
     @State private var showingBodyweightInput = false
     @State private var showingNutritionInput = false
@@ -519,9 +519,6 @@ struct WorkoutSessionView: View {
     }
     
     private func getSetsForCurrentExercise() -> [ExerciseSet] {
-        // Force refresh by accessing the trigger (SwiftUI will re-evaluate when this changes)
-        _ = refreshTrigger
-        
         guard let completed = completedExercise else { 
             #if DEBUG
             print("No completed exercise found for current exercise")
@@ -529,9 +526,7 @@ struct WorkoutSessionView: View {
             return [] 
         }
         
-        // Refresh the completed exercise to get latest data
-        viewContext.refresh(completed, mergeChanges: true)
-        
+        // Return sets directly - no aggressive refreshing needed
         let sets = completed.sets
         #if DEBUG
         print("Found \(sets.count) sets for \(completed.template?.name ?? "unknown")")
@@ -652,7 +647,7 @@ struct WorkoutSessionView: View {
         
         do {
             try viewContext.save()
-            refreshTrigger += 1 // Trigger UI update
+            // refreshTrigger += 1 // Trigger UI update - REMOVED
         } catch {
             #if DEBUG
             print("Error adding set: \(error)")
@@ -672,7 +667,7 @@ struct WorkoutSessionView: View {
             
             do {
                 try viewContext.save()
-                refreshTrigger += 1 // Trigger UI update
+                // refreshTrigger += 1 // Trigger UI update - REMOVED
             } catch {
                 #if DEBUG
                 print("Error removing set: \(error)")
@@ -810,25 +805,39 @@ struct SetRowView: View {
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
                         .onChange(of: weightString) { newValue in
-                            // Clean input validation without causing state updates
+                            // Immediate input validation without async delays
                             let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
                             
-                            // Only update if filtering actually changed something
+                            // Update weight string immediately if filtering changed something
                             if filteredValue != newValue {
-                                DispatchQueue.main.async {
-                                    weightString = filteredValue
+                                weightString = filteredValue
+                            }
+                            
+                            // Only update Core Data and trigger saves if we have valid input
+                            guard !filteredValue.isEmpty else {
+                                // Clear weight when input is empty
+                                if set.isBodyweight {
+                                    set.extraWeight = 0
+                                } else {
+                                    set.weight = 0
                                 }
+                                // Don't check completion status for empty values to avoid UI updates
+                                debouncedSave()
                                 return
                             }
                             
-                            // Update Core Data model
+                            // Update Core Data model with validated value
                             let weightValue = min(Double(filteredValue) ?? 0, 999.9)
                             if set.isBodyweight {
                                 set.extraWeight = weightValue
                             } else {
                                 set.weight = weightValue
                             }
-                            updateCompletionStatus()
+                            
+                            // Only check completion if we have meaningful weight (> 0)
+                            if weightValue > 0 {
+                                updateCompletionStatus()
+                            }
                             debouncedSave()
                         }
                 }
@@ -848,21 +857,31 @@ struct SetRowView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 60)
                         .onChange(of: repsString) { newValue in
-                            // Clean input validation without causing state updates
+                            // Immediate input validation without async delays
                             let filteredValue = newValue.filter { $0.isNumber }
                             
-                            // Only update if filtering actually changed something
+                            // Update reps string immediately if filtering changed something
                             if filteredValue != newValue {
-                                DispatchQueue.main.async {
-                                    repsString = filteredValue
-                                }
+                                repsString = filteredValue
+                            }
+                            
+                            // Only update Core Data and trigger saves if we have valid input
+                            guard !filteredValue.isEmpty else {
+                                // Clear reps when input is empty
+                                set.reps = 0
+                                // Don't check completion status for empty values to avoid UI updates
+                                debouncedSave()
                                 return
                             }
                             
-                            // Update Core Data model
+                            // Update Core Data model with validated value
                             let repsValue = min(Int(filteredValue) ?? 0, 999)
                             set.reps = Int16(repsValue)
-                            updateCompletionStatus()
+                            
+                            // Only check completion if we have meaningful reps (> 0)
+                            if repsValue > 0 {
+                                updateCompletionStatus()
+                            }
                             debouncedSave()
                         }
                 }
@@ -906,14 +925,18 @@ struct SetRowView: View {
     private func updateCompletionStatus() {
         let wasCompleted = set.isCompleted
         let isNowCompleted = setIsCompleted
-        set.isCompleted = isNowCompleted
         
-        // Auto-start rest timer when set becomes completed
-        if !wasCompleted && isNowCompleted {
-            #if DEBUG
-            print("🎯 Set completed! Triggering rest timer")
-            #endif
-            onSetCompleted?()
+        // Only update if status actually changed to avoid unnecessary Core Data writes
+        if wasCompleted != isNowCompleted {
+            set.isCompleted = isNowCompleted
+            
+            // Auto-start rest timer when set becomes completed
+            if !wasCompleted && isNowCompleted {
+                #if DEBUG
+                print("🎯 Set completed! Triggering rest timer")
+                #endif
+                onSetCompleted?()
+            }
         }
     }
     
@@ -921,13 +944,13 @@ struct SetRowView: View {
         // Cancel previous save work item
         saveWorkItem?.cancel()
         
-        // Create new work item with 0.5 second delay
-        saveWorkItem = DispatchWorkItem {
-            saveContext()
+        // Create new work item with 1 second delay to be more aggressive
+        saveWorkItem = DispatchWorkItem { [weak self] in
+            self?.saveContext()
         }
         
         // Schedule the work item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: saveWorkItem!)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: saveWorkItem!)
     }
     
     private func saveContext() {
