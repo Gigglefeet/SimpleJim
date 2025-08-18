@@ -945,8 +945,8 @@ struct SetRowView: View {
         saveWorkItem?.cancel()
         
         // Create new work item with 1 second delay to be more aggressive
-        saveWorkItem = DispatchWorkItem { [weak self] in
-            self?.saveContext()
+        saveWorkItem = DispatchWorkItem {
+            saveContext()
         }
         
         // Schedule the work item
