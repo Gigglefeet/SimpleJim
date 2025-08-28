@@ -5,6 +5,7 @@ import Combine
 struct WorkoutSessionView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     
     let dayTemplate: TrainingDayTemplate
     @ObservedObject var trainingSession: TrainingSession
@@ -28,6 +29,7 @@ struct WorkoutSessionView: View {
     // Timer cancellation tokens to prevent memory leaks
     @State private var workoutTimerCancellable: AnyCancellable?
     @State private var restTimerCancellable: AnyCancellable?
+    @State private var timersAreRunning = false
     
     // Timers are now managed through cancellable tokens for proper cleanup
     
@@ -418,7 +420,10 @@ struct WorkoutSessionView: View {
         .onAppear {
             setupWorkoutSession()
             loadRestTimerSettings()
-            startTimers()
+            startTimersIfNeeded()
+        }
+        .onChange(of: scenePhase) { newPhase in
+            handleScenePhaseChange(newPhase)
         }
         .alert("Finish Workout?", isPresented: $showingFinishAlert) {
             Button("Cancel", role: .cancel) { }
@@ -441,8 +446,7 @@ struct WorkoutSessionView: View {
             RestTimerSettingsView(defaultRestTime: $defaultRestTime)
         }
         .onDisappear {
-            workoutTimerCancellable?.cancel()
-            restTimerCancellable?.cancel()
+            stopTimersIfRunning()
         }
     }
     
@@ -704,7 +708,9 @@ struct WorkoutSessionView: View {
         updateWorkoutTime()
     }
     
-    private func startTimers() {
+    private func startTimersIfNeeded() {
+        guard !timersAreRunning else { return }
+        
         // Start workout timer
         workoutTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
@@ -718,6 +724,47 @@ struct WorkoutSessionView: View {
             .sink { _ in
                 updateRestTimer()
             }
+        
+        timersAreRunning = true
+        
+        #if DEBUG
+        print("🔄 Timers started")
+        #endif
+    }
+    
+    private func stopTimersIfRunning() {
+        guard timersAreRunning else { return }
+        
+        workoutTimerCancellable?.cancel()
+        restTimerCancellable?.cancel()
+        timersAreRunning = false
+        
+        #if DEBUG
+        print("⏹️ Timers stopped")
+        #endif
+    }
+    
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
+        switch newPhase {
+        case .active:
+            // App became active - restart timers gently
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                startTimersIfNeeded()
+            }
+            #if DEBUG
+            print("📱 App became active - restarting timers")
+            #endif
+            
+        case .inactive, .background:
+            // App went to background - stop timers but don't immediately restart
+            stopTimersIfRunning()
+            #if DEBUG
+            print("📱 App went to background - stopping timers")
+            #endif
+            
+        @unknown default:
+            break
+        }
     }
 }
 
@@ -805,23 +852,26 @@ struct SetRowView: View {
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
                         .onChange(of: weightString) { newValue in
-                            // Immediate input validation without async delays
+                            // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
                             
-                            // Update weight string immediately if filtering changed something
-                            if filteredValue != newValue {
-                                weightString = filteredValue
+                            // Only proceed if the value changed meaningfully
+                            guard filteredValue == newValue else {
+                                // Use DispatchQueue to prevent immediate state update that dismisses keyboard
+                                DispatchQueue.main.async {
+                                    weightString = filteredValue
+                                }
+                                return
                             }
                             
-                            // Only update Core Data and trigger saves if we have valid input
-                            guard !filteredValue.isEmpty else {
+                            // Update Core Data model
+                            if filteredValue.isEmpty {
                                 // Clear weight when input is empty
                                 if set.isBodyweight {
                                     set.extraWeight = 0
                                 } else {
                                     set.weight = 0
                                 }
-                                // Don't check completion status for empty values to avoid UI updates
                                 debouncedSave()
                                 return
                             }
@@ -857,19 +907,22 @@ struct SetRowView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 60)
                         .onChange(of: repsString) { newValue in
-                            // Immediate input validation without async delays
+                            // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber }
                             
-                            // Update reps string immediately if filtering changed something
-                            if filteredValue != newValue {
-                                repsString = filteredValue
+                            // Only proceed if the value changed meaningfully
+                            guard filteredValue == newValue else {
+                                // Use DispatchQueue to prevent immediate state update that dismisses keyboard
+                                DispatchQueue.main.async {
+                                    repsString = filteredValue
+                                }
+                                return
                             }
                             
-                            // Only update Core Data and trigger saves if we have valid input
-                            guard !filteredValue.isEmpty else {
+                            // Update Core Data model
+                            if filteredValue.isEmpty {
                                 // Clear reps when input is empty
                                 set.reps = 0
-                                // Don't check completion status for empty values to avoid UI updates
                                 debouncedSave()
                                 return
                             }

@@ -52,8 +52,12 @@ struct BodyweightInputView: View {
                                 .onChange(of: bodyweightString) { newValue in
                                     // Input validation: only allow positive numbers up to 500kg
                                     let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
-                                    if filteredValue != newValue {
-                                        bodyweightString = filteredValue
+                                    
+                                    guard filteredValue == newValue else {
+                                        // Use DispatchQueue to prevent immediate state update that dismisses keyboard
+                                        DispatchQueue.main.async {
+                                            bodyweightString = filteredValue
+                                        }
                                         return
                                     }
                                     
