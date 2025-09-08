@@ -427,35 +427,70 @@ struct WorkoutSessionView: View {
                             }
                             
                             // Navigation buttons
-                            HStack(spacing: 20) {
-                                if canGoToPreviousExercise {
-                                    Button("Previous") {
-                                        goToPreviousExercise()
+                            VStack(spacing: 12) {
+                                HStack(spacing: 20) {
+                                    if canGoToPreviousExercise {
+                                        Button("Previous") {
+                                            goToPreviousExercise()
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 44)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(10)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(10)
+                                    
+                                    if canGoToNextExercise {
+                                        Button(nextButtonTitle) {
+                                            goToNextExercise()
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 44)
+                                        .background(nextExerciseInSuperset != nil ? Color.orange : (currentGroupIndex < exerciseGroups.count - 1 ? Color.orange : Color.green))
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    } else {
+                                        Button("Finish Workout") {
+                                            showingFinishAlert = true
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 44)
+                                        .background(Color.green)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    }
                                 }
                                 
-                                if canGoToNextExercise {
-                                    Button(nextButtonTitle) {
-                                        goToNextExercise()
+                                // Show "Add More" option when on last exercise
+                                if !canGoToNextExercise {
+                                    VStack(spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "lightbulb.fill")
+                                                .foregroundColor(.orange)
+                                                .font(.caption)
+                                            
+                                            Text("Want to add more exercises?")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            
+                                            Spacer()
+                                        }
+                                        
+                                        Button(action: {
+                                            showingAddExercise = true
+                                        }) {
+                                            HStack {
+                                                Image(systemName: "plus.circle.fill")
+                                                Text("Add Exercise")
+                                                    .bold()
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 44)
+                                            .foregroundColor(.white)
+                                            .background(Color.blue)
+                                            .cornerRadius(10)
+                                        }
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(nextExerciseInSuperset != nil ? Color.orange : (currentGroupIndex < exerciseGroups.count - 1 ? Color.orange : Color.green))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
-                                } else {
-                                    Button("Finish Workout") {
-                                        showingFinishAlert = true
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(Color.green)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
+                                    .padding(.top, 4)
                                 }
                             }
                             .padding()
