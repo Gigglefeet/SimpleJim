@@ -27,6 +27,9 @@ struct WorkoutSessionView: View {
     @State private var defaultRestTime: TimeInterval = 90 // 90 seconds default
     @State private var showingRestSettings = false
     @State private var showingAddExercise = false
+    @State private var showingDeleteConfirmation = false
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging = false
     
     // Timer cancellation tokens to prevent memory leaks
     @State private var workoutTimerCancellable: AnyCancellable?
@@ -185,8 +188,69 @@ struct WorkoutSessionView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Progress header
-                VStack(spacing: 12) {
+                headerSection
+                exerciseContentSection
+                Spacer()
+            }
+            .navigationBarHidden(true)
+        }
+        .onAppear {
+            setupWorkoutSession()
+            loadRestTimerSettings()
+            requestNotificationPermissions()
+            restoreRestTimerIfNeeded()
+            startTimersIfNeeded()
+        }
+        .onChange(of: scenePhase) { newPhase in
+            handleScenePhaseChange(newPhase)
+        }
+        .alert("Finish Workout?", isPresented: $showingFinishAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Finish") {
+                finishWorkout()
+            }
+        } message: {
+            Text("Are you sure you want to finish this workout? Your progress will be saved.")
+        }
+        .alert("Delete Exercise?", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteCurrentExercise()
+            }
+        } message: {
+            Text("Are you sure you want to delete \"\(currentExercise?.name ?? "this exercise")\"? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showingSleepInput) {
+            SleepInputView(trainingSession: trainingSession)
+        }
+        .sheet(isPresented: $showingNutritionInput) {
+            NutritionInputView(trainingSession: trainingSession)
+        }
+        .sheet(isPresented: $showingBodyweightInput) {
+            BodyweightInputView(trainingSession: trainingSession)
+        }
+        .sheet(isPresented: $showingRestSettings) {
+            RestTimerSettingsView(defaultRestTime: $defaultRestTime)
+        }
+        .sheet(isPresented: $showingAddExercise) {
+            QuickAddExerciseView(
+                dayTemplate: dayTemplate,
+                trainingSession: trainingSession,
+                onExerciseAdded: { newExercise in
+                    handleNewExerciseAdded(newExercise)
+                }
+            )
+        }
+        .onDisappear {
+            stopTimersIfRunning()
+            // Don't clear timer state on disappear - only clear when timer completes or is manually stopped
+        }
+    }
+    
+    // MARK: - View Components
+    
+    private var headerSection: some View {
+        VStack(spacing: 12) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(dayTemplate.name ?? "Workout")
@@ -249,11 +313,6 @@ struct WorkoutSessionView: View {
                                     .foregroundColor(.blue)
                                     .font(.title2)
                             }
-                            
-                            Button("Finish") {
-                                showingFinishAlert = true
-                            }
-                            .foregroundColor(.orange)
                         }
                     }
                     
@@ -278,11 +337,36 @@ struct WorkoutSessionView: View {
                 }
                 .padding()
                 .background(Color(.systemGray6))
-                
-                // Current exercise
+    }
+    
+    private var exerciseContentSection: some View {
+        Group {
+            // Current exercise
                 if let exercise = currentExercise {
-                    ScrollView {
-                        VStack(spacing: 20) {
+                    ZStack {
+                        // Delete background (shows when swiping)
+                        if canDeleteCurrentExercise && isDragging && dragOffset < -50 {
+                            HStack {
+                                Spacer()
+                                VStack {
+                                    Image(systemName: "trash.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("Release to Delete")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .bold()
+                                }
+                                .padding(.trailing, 30)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color.red)
+                        }
+                        
+                        // Main content with swipe gesture
+                        ScrollView {
+                            VStack(spacing: 20) {
                             // Exercise info with superset context
                             VStack(spacing: 8) {
                                 // Superset indicator
@@ -313,24 +397,9 @@ struct WorkoutSessionView: View {
                                     .cornerRadius(12)
                                 }
                                 
-                                HStack {
-                                    Text(exercise.name ?? "Exercise")
-                                        .font(.title)
-                                        .bold()
-                                    
-                                    // Show delete button for dynamically added exercises (last few exercises)
-                                    if canDeleteCurrentExercise {
-                                        Button(action: {
-                                            deleteCurrentExercise()
-                                        }) {
-                                            Image(systemName: "trash.circle.fill")
-                                                .foregroundColor(.red)
-                                                .font(.title3)
-                                        }
-                                        .padding(.leading, 8)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .center)
+                                Text(exercise.name ?? "Exercise")
+                                    .font(.title)
+                                    .bold()
                                 
                                 Text(exercise.muscleGroup ?? "")
                                     .font(.subheadline)
@@ -495,58 +564,37 @@ struct WorkoutSessionView: View {
                             }
                             .padding()
                         }
+                        .offset(x: dragOffset)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    if canDeleteCurrentExercise {
+                                        isDragging = true
+                                        // Only allow left swipe
+                                        dragOffset = min(0, value.translation.width)
+                                    }
+                                }
+                                .onEnded { value in
+                                    isDragging = false
+                                    
+                                    if canDeleteCurrentExercise && dragOffset < -100 {
+                                        // Trigger delete confirmation
+                                        showingDeleteConfirmation = true
+                                    }
+                                    
+                                    // Reset position
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                        )
                     }
+                    } // End ZStack
                 } else {
                     Text("No exercises in this workout")
                         .foregroundColor(.secondary)
                 }
-                
-                Spacer()
-            }
-            .navigationBarHidden(true)
-        }
-        .onAppear {
-            setupWorkoutSession()
-            loadRestTimerSettings()
-            requestNotificationPermissions()
-            restoreRestTimerIfNeeded()
-            startTimersIfNeeded()
-        }
-        .onChange(of: scenePhase) { newPhase in
-            handleScenePhaseChange(newPhase)
-        }
-        .alert("Finish Workout?", isPresented: $showingFinishAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Finish") {
-                finishWorkout()
-            }
-        } message: {
-            Text("Are you sure you want to finish this workout? Your progress will be saved.")
-        }
-        .sheet(isPresented: $showingSleepInput) {
-            SleepInputView(trainingSession: trainingSession)
-        }
-        .sheet(isPresented: $showingNutritionInput) {
-            NutritionInputView(trainingSession: trainingSession)
-        }
-        .sheet(isPresented: $showingBodyweightInput) {
-            BodyweightInputView(trainingSession: trainingSession)
-        }
-        .sheet(isPresented: $showingRestSettings) {
-            RestTimerSettingsView(defaultRestTime: $defaultRestTime)
-        }
-        .sheet(isPresented: $showingAddExercise) {
-            QuickAddExerciseView(
-                dayTemplate: dayTemplate,
-                trainingSession: trainingSession,
-                onExerciseAdded: { newExercise in
-                    handleNewExerciseAdded(newExercise)
-                }
-            )
-        }
-        .onDisappear {
-            stopTimersIfRunning()
-            // Don't clear timer state on disappear - only clear when timer completes or is manually stopped
         }
     }
     
