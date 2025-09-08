@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 import Combine
+import UserNotifications
 
 struct WorkoutSessionView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -25,11 +26,23 @@ struct WorkoutSessionView: View {
     @State private var restTimerActive = false
     @State private var defaultRestTime: TimeInterval = 90 // 90 seconds default
     @State private var showingRestSettings = false
+    @State private var showingAddExercise = false
     
     // Timer cancellation tokens to prevent memory leaks
     @State private var workoutTimerCancellable: AnyCancellable?
     @State private var restTimerCancellable: AnyCancellable?
     @State private var timersAreRunning = false
+    
+    // Background timer persistence
+    @State private var restTimerStartTime: Date?
+    @State private var restTimerEndTime: Date?
+    @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    
+    // UserDefaults keys for timer persistence
+    private let restTimerActiveKey = "restTimerActive"
+    private let restTimerStartTimeKey = "restTimerStartTime"
+    private let restTimerDurationKey = "restTimerDuration"
+    private let restTimerSessionIDKey = "restTimerSessionID"
     
     // Timers are now managed through cancellable tokens for proper cleanup
     
@@ -153,6 +166,22 @@ struct WorkoutSessionView: View {
         return "Loading..."
     }
     
+    // Dynamic exercise deletion logic
+    private var canDeleteCurrentExercise: Bool {
+        guard let exercise = currentExercise else { return false }
+        
+        // Only allow deletion if this is one of the last 3 exercises added
+        // (assumes recently added exercises are at the end)
+        let allExercises = dayTemplate.sortedExerciseTemplates
+        guard let exerciseIndex = allExercises.firstIndex(of: exercise) else { return false }
+        
+        // Allow deletion if it's in the last 3 exercises and we have more than 1 exercise total
+        let isInLastThree = exerciseIndex >= max(0, allExercises.count - 3)
+        let hasMultipleExercises = allExercises.count > 1
+        
+        return isInLastThree && hasMultipleExercises
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -209,6 +238,15 @@ struct WorkoutSessionView: View {
                             }) {
                                 Image(systemName: trainingSession.proteinGrams > 0 ? "fork.knife.circle.fill" : "fork.knife.circle")
                                     .foregroundColor(trainingSession.proteinGrams > 0 ? .green : .gray)
+                                    .font(.title2)
+                            }
+                            
+                            // Add exercise button
+                            Button(action: {
+                                showingAddExercise = true
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(.blue)
                                     .font(.title2)
                             }
                             
@@ -275,9 +313,24 @@ struct WorkoutSessionView: View {
                                     .cornerRadius(12)
                                 }
                                 
-                                Text(exercise.name ?? "Exercise")
-                                    .font(.title)
-                                    .bold()
+                                HStack {
+                                    Text(exercise.name ?? "Exercise")
+                                        .font(.title)
+                                        .bold()
+                                    
+                                    // Show delete button for dynamically added exercises (last few exercises)
+                                    if canDeleteCurrentExercise {
+                                        Button(action: {
+                                            deleteCurrentExercise()
+                                        }) {
+                                            Image(systemName: "trash.circle.fill")
+                                                .foregroundColor(.red)
+                                                .font(.title3)
+                                        }
+                                        .padding(.leading, 8)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
                                 
                                 Text(exercise.muscleGroup ?? "")
                                     .font(.subheadline)
@@ -420,6 +473,8 @@ struct WorkoutSessionView: View {
         .onAppear {
             setupWorkoutSession()
             loadRestTimerSettings()
+            requestNotificationPermissions()
+            restoreRestTimerIfNeeded()
             startTimersIfNeeded()
         }
         .onChange(of: scenePhase) { newPhase in
@@ -445,8 +500,18 @@ struct WorkoutSessionView: View {
         .sheet(isPresented: $showingRestSettings) {
             RestTimerSettingsView(defaultRestTime: $defaultRestTime)
         }
+        .sheet(isPresented: $showingAddExercise) {
+            QuickAddExerciseView(
+                dayTemplate: dayTemplate,
+                trainingSession: trainingSession,
+                onExerciseAdded: { newExercise in
+                    handleNewExerciseAdded(newExercise)
+                }
+            )
+        }
         .onDisappear {
             stopTimersIfRunning()
+            // Don't clear timer state on disappear - only clear when timer completes or is manually stopped
         }
     }
     
@@ -569,22 +634,38 @@ struct WorkoutSessionView: View {
     // MARK: - Rest Timer Methods
     
     private func startRestTimer() {
+        let currentTime = Date()
+        restTimerStartTime = currentTime
+        restTimerEndTime = currentTime.addingTimeInterval(defaultRestTime)
         restTimeRemaining = defaultRestTime
         restTimerActive = true
         
+        // Persist timer state to UserDefaults
+        saveRestTimerState()
+        
+        // Schedule local notification for timer completion
+        scheduleRestTimerNotification()
+        
+        // Start background task to keep timer running
+        startBackgroundTask()
+        
         #if DEBUG
         print("⏰ Started rest timer: \(Int(defaultRestTime))s")
+        print("⏰ Timer will end at: \(restTimerEndTime?.description ?? "unknown")")
         #endif
     }
     
     private func updateRestTimer() {
-        guard restTimerActive else { return }
+        guard restTimerActive, let endTime = restTimerEndTime else { return }
         
-        if restTimeRemaining > 0 {
-            restTimeRemaining -= 1
+        let currentTime = Date()
+        let remainingTime = endTime.timeIntervalSince(currentTime)
+        
+        if remainingTime > 0 {
+            restTimeRemaining = remainingTime
             
             // Warning haptic at 10 seconds remaining
-            if restTimeRemaining == 10 {
+            if remainingTime <= 10 && remainingTime > 9 {
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.impactOccurred()
                 #if DEBUG
@@ -593,47 +674,334 @@ struct WorkoutSessionView: View {
             }
             
             // Final countdown haptic at 3, 2, 1
-            if restTimeRemaining <= 3 && restTimeRemaining > 0 {
+            if remainingTime <= 3 && remainingTime > 0 {
                 let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                 impactFeedback.impactOccurred()
                 #if DEBUG
-                print("⏰ Rest timer countdown: \(Int(restTimeRemaining))")
+                print("⏰ Rest timer countdown: \(Int(remainingTime))")
                 #endif
             }
         } else {
             // Rest time completed
-            restTimerActive = false
-            
-            // Strong completion haptic feedback (3 pulses)
-            let notificationFeedback = UINotificationFeedbackGenerator()
-            notificationFeedback.notificationOccurred(.success)
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-                impactFeedback.impactOccurred()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-                impactFeedback.impactOccurred()
-            }
-            
-
+            completeRestTimer()
         }
     }
     
     private func pauseRest() {
+        if restTimerActive {
+            // Save current remaining time when pausing
+            restTimeRemaining = max(0, restTimerEndTime?.timeIntervalSince(Date()) ?? 0)
+        }
         restTimerActive = false
+        clearRestTimerState()
+        cancelRestTimerNotification()
+        endBackgroundTask()
+        
+        #if DEBUG
+        print("⏸️ Rest timer paused with \(Int(restTimeRemaining))s remaining")
+        #endif
     }
     
     private func resetRest() {
+        let currentTime = Date()
+        restTimerStartTime = currentTime
+        restTimerEndTime = currentTime.addingTimeInterval(defaultRestTime)
         restTimeRemaining = defaultRestTime
         restTimerActive = true
+        
+        // Update persistence and notifications
+        saveRestTimerState()
+        scheduleRestTimerNotification()
+        startBackgroundTask()
+        
+        #if DEBUG
+        print("🔄 Rest timer reset to \(Int(defaultRestTime))s")
+        #endif
     }
     
     private func skipRest() {
         restTimerActive = false
         restTimeRemaining = 0
+        clearRestTimerState()
+        cancelRestTimerNotification()
+        endBackgroundTask()
+        
+        #if DEBUG
+        print("⏭️ Rest timer skipped")
+        #endif
+    }
+    
+    // MARK: - Timer Completion and Restoration
+    
+    private func completeRestTimer() {
+        restTimerActive = false
+        restTimeRemaining = 0
+        clearRestTimerState()
+        cancelRestTimerNotification()
+        endBackgroundTask()
+        
+        // Strong completion haptic feedback (3 pulses)
+        let notificationFeedback = UINotificationFeedbackGenerator()
+        notificationFeedback.notificationOccurred(.success)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+            impactFeedback.impactOccurred()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+            impactFeedback.impactOccurred()
+        }
+        
+        #if DEBUG
+        print("✅ Rest timer completed!")
+        #endif
+    }
+    
+    // MARK: - Timer State Persistence
+    
+    private func saveRestTimerState() {
+        guard let startTime = restTimerStartTime else { return }
+        let sessionID = trainingSession.objectID.uriRepresentation().absoluteString
+        
+        UserDefaults.standard.set(true, forKey: restTimerActiveKey)
+        UserDefaults.standard.set(startTime, forKey: restTimerStartTimeKey)
+        UserDefaults.standard.set(defaultRestTime, forKey: restTimerDurationKey)
+        UserDefaults.standard.set(sessionID, forKey: restTimerSessionIDKey)
+        
+        #if DEBUG
+        print("💾 Saved rest timer state: active=true, duration=\(defaultRestTime)s")
+        #endif
+    }
+    
+    private func clearRestTimerState() {
+        UserDefaults.standard.removeObject(forKey: restTimerActiveKey)
+        UserDefaults.standard.removeObject(forKey: restTimerStartTimeKey)
+        UserDefaults.standard.removeObject(forKey: restTimerDurationKey)
+        UserDefaults.standard.removeObject(forKey: restTimerSessionIDKey)
+        
+        #if DEBUG
+        print("🗑️ Cleared rest timer state")
+        #endif
+    }
+    
+    private func restoreRestTimerIfNeeded() {
+        let isActive = UserDefaults.standard.bool(forKey: restTimerActiveKey)
+        guard isActive,
+              let savedSessionID = UserDefaults.standard.string(forKey: restTimerSessionIDKey),
+              let startTime = UserDefaults.standard.object(forKey: restTimerStartTimeKey) as? Date else {
+            // Clear invalid timer state
+            clearRestTimerState()
+            return
+        }
+        
+        let currentSessionID = trainingSession.objectID.uriRepresentation().absoluteString
+        guard savedSessionID == currentSessionID else {
+            // Clear invalid timer state for different session
+            clearRestTimerState()
+            return
+        }
+        
+        let duration = UserDefaults.standard.double(forKey: restTimerDurationKey)
+        let endTime = startTime.addingTimeInterval(duration)
+        let currentTime = Date()
+        let remainingTime = endTime.timeIntervalSince(currentTime)
+        
+        if remainingTime > 0 {
+            // Timer is still running
+            restTimerStartTime = startTime
+            restTimerEndTime = endTime
+            restTimeRemaining = remainingTime
+            restTimerActive = true
+            
+            // Re-schedule notification if needed
+            scheduleRestTimerNotification()
+            startBackgroundTask()
+            
+            #if DEBUG
+            print("🔄 Restored rest timer: \(Int(remainingTime))s remaining")
+            #endif
+        } else {
+            // Timer has already completed
+            completeRestTimer()
+        }
+    }
+    
+    // MARK: - Local Notifications
+    
+    private func requestNotificationPermissions() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            DispatchQueue.main.async {
+                if granted {
+                    #if DEBUG
+                    print("🔔 Notification permissions granted")
+                    #endif
+                } else {
+                    #if DEBUG
+                    print("🚫 Notification permissions denied: \(error?.localizedDescription ?? "Unknown error")")
+                    #endif
+                }
+            }
+        }
+    }
+    
+    private func scheduleRestTimerNotification() {
+        guard let endTime = restTimerEndTime else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Rest Timer Complete"
+        content.body = "Your rest period is over. Time for your next set!"
+        content.sound = .default
+        content.categoryIdentifier = "REST_TIMER"
+        
+        let timeInterval = endTime.timeIntervalSince(Date())
+        guard timeInterval > 0 else { return }
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeInterval, repeats: false)
+        let request = UNNotificationRequest(identifier: "rest_timer_completion", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                #if DEBUG
+                print("❌ Failed to schedule notification: \(error)")
+                #endif
+            } else {
+                #if DEBUG
+                print("🔔 Scheduled rest timer notification for \(Int(timeInterval))s")
+                #endif
+            }
+        }
+    }
+    
+    private func cancelRestTimerNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest_timer_completion"])
+        #if DEBUG
+        print("🔕 Cancelled rest timer notification")
+        #endif
+    }
+    
+    // MARK: - Background Task Management
+    
+    private func startBackgroundTask() {
+        guard backgroundTaskID == .invalid else { return }
+        
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
+            // Background task expiration handler
+            // The system will handle cleanup automatically if the task expires
+            // We can't capture self here since SwiftUI Views are structs
+        }
+        
+        #if DEBUG
+        print("🌙 Started background task for rest timer")
+        #endif
+    }
+    
+    private func endBackgroundTask() {
+        guard backgroundTaskID != .invalid else { return }
+        
+        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+        backgroundTaskID = .invalid
+        
+        #if DEBUG
+        print("🌅 Ended background task for rest timer")
+        #endif
+    }
+    
+    // MARK: - Dynamic Exercise Management
+    
+    private func handleNewExerciseAdded(_ exerciseTemplate: ExerciseTemplate) {
+        // Create a completed exercise for this new template
+        let completedExercise = CompletedExercise(context: viewContext)
+        completedExercise.template = exerciseTemplate
+        completedExercise.session = trainingSession
+        
+        // Create sets based on target sets
+        for setIndex in 0..<exerciseTemplate.targetSets {
+            let exerciseSet = ExerciseSet(context: viewContext)
+            exerciseSet.order = Int16(setIndex)
+            exerciseSet.weight = 0
+            exerciseSet.reps = 0
+            exerciseSet.isCompleted = false
+            exerciseSet.completedExercise = completedExercise
+            
+            completedExercise.addToExerciseSets(exerciseSet)
+        }
+        
+        do {
+            try viewContext.save()
+            
+            // Refresh the training session to pick up the new relationships
+            viewContext.refresh(trainingSession, mergeChanges: true)
+            
+            // Navigate to the newly added exercise (it will be the last one)
+            let totalGroups = exerciseGroups.count
+            if totalGroups > 0 {
+                currentGroupIndex = totalGroups - 1
+                currentExerciseInGroup = 0
+            }
+            
+            #if DEBUG
+            print("✅ Added new exercise: \(exerciseTemplate.name ?? "Unknown") and navigated to it")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ Error adding new exercise: \(error)")
+            #endif
+        }
+    }
+    
+    private func deleteCurrentExercise() {
+        guard let exercise = currentExercise, canDeleteCurrentExercise else { return }
+        
+        #if DEBUG
+        print("🗑️ Attempting to delete exercise: \(exercise.name ?? "Unknown")")
+        #endif
+        
+        // Find and delete the completed exercise associated with this template
+        if let completedExercise = trainingSession.sortedCompletedExercises.first(where: { $0.template == exercise }) {
+            // Delete all sets first
+            if let sets = completedExercise.exerciseSets {
+                for set in sets {
+                    viewContext.delete(set as! NSManagedObject)
+                }
+            }
+            
+            // Delete the completed exercise
+            viewContext.delete(completedExercise)
+        }
+        
+        // Delete the exercise template
+        viewContext.delete(exercise)
+        
+        do {
+            try viewContext.save()
+            
+            // Navigate to a safe position
+            let remainingExercises = dayTemplate.sortedExerciseTemplates.count - 1 // -1 because we just deleted one
+            
+            if remainingExercises > 0 {
+                // If we deleted the last exercise, go to the previous one
+                if currentGroupIndex >= remainingExercises {
+                    currentGroupIndex = max(0, remainingExercises - 1)
+                    currentExerciseInGroup = 0
+                }
+                // Otherwise stay where we are (the next exercise will slide into this position)
+            } else {
+                // This was the last exercise - shouldn't happen due to canDeleteCurrentExercise check
+                currentGroupIndex = 0
+                currentExerciseInGroup = 0
+            }
+            
+            #if DEBUG
+            print("✅ Successfully deleted exercise and navigated to safe position")
+            #endif
+            
+        } catch {
+            #if DEBUG
+            print("❌ Error deleting exercise: \(error)")
+            #endif
+        }
     }
     
     private func addSet() {
@@ -747,19 +1115,21 @@ struct WorkoutSessionView: View {
     private func handleScenePhaseChange(_ newPhase: ScenePhase) {
         switch newPhase {
         case .active:
-            // App became active - restart timers gently
+            // App became active - restore timer state and restart UI timers
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                restoreRestTimerIfNeeded()
                 startTimersIfNeeded()
             }
             #if DEBUG
-            print("📱 App became active - restarting timers")
+            print("📱 App became active - restoring timer state and restarting UI timers")
             #endif
             
         case .inactive, .background:
-            // App went to background - stop timers but don't immediately restart
+            // App went to background - stop UI timers but keep timer state persisted
             stopTimersIfRunning()
+            // Don't clear timer state - it should persist in background
             #if DEBUG
-            print("📱 App went to background - stopping timers")
+            print("📱 App went to background - stopping UI timers, keeping timer state")
             #endif
             
         @unknown default:
