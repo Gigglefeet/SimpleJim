@@ -25,6 +25,14 @@ struct WorkoutSessionView: View {
     @State private var restTimeRemaining: TimeInterval = 0
     @State private var restTimerActive = false
     @State private var defaultRestTime: TimeInterval = 90 // 90 seconds default
+    
+    // Computed property for real-time display (reduces state updates)
+    private var displayRestTime: TimeInterval {
+        guard restTimerActive, let endTime = restTimerEndTime else { return restTimeRemaining }
+        let currentTime = Date()
+        let remainingTime = endTime.timeIntervalSince(currentTime)
+        return max(0, remainingTime)
+    }
     @State private var showingRestSettings = false
     @State private var showingAddExercise = false
     @State private var showingDeleteConfirmation = false
@@ -365,7 +373,7 @@ struct WorkoutSessionView: View {
                         }
                         
                         // Main content with swipe gesture
-                        ScrollView {
+                        ScrollView(.vertical, showsIndicators: true) {
                             VStack(spacing: 20) {
                             // Exercise info with superset context
                             VStack(spacing: 8) {
@@ -567,27 +575,44 @@ struct WorkoutSessionView: View {
                         .offset(x: dragOffset)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
                         .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    if canDeleteCurrentExercise {
-                                        isDragging = true
-                                        // Only allow left swipe
-                                        dragOffset = min(0, value.translation.width)
+                            // Only apply drag gesture when deletion is possible
+                            canDeleteCurrentExercise ? 
+                            AnyGesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        // Only activate for clear horizontal swipes
+                                        let horizontalMovement = abs(value.translation.width)
+                                        let verticalMovement = abs(value.translation.height)
+                                        
+                                        // Require significant horizontal movement and minimal vertical
+                                        if horizontalMovement > verticalMovement && 
+                                           horizontalMovement > 20 && 
+                                           verticalMovement < 30 {
+                                            isDragging = true
+                                            // Only allow left swipe
+                                            dragOffset = min(0, value.translation.width)
+                                        }
                                     }
-                                }
-                                .onEnded { value in
-                                    isDragging = false
-                                    
-                                    if canDeleteCurrentExercise && dragOffset < -100 {
-                                        // Trigger delete confirmation
-                                        showingDeleteConfirmation = true
+                                    .onEnded { value in
+                                        isDragging = false
+                                        
+                                        // Only trigger delete for clear horizontal swipes
+                                        let horizontalMovement = abs(value.translation.width)
+                                        let verticalMovement = abs(value.translation.height)
+                                        
+                                        if dragOffset < -100 && 
+                                           horizontalMovement > verticalMovement &&
+                                           horizontalMovement > 50 {
+                                            // Trigger delete confirmation
+                                            showingDeleteConfirmation = true
+                                        }
+                                        
+                                        // Reset position
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            dragOffset = 0
+                                        }
                                     }
-                                    
-                                    // Reset position
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        dragOffset = 0
-                                    }
-                                }
+                            ) : nil
                         )
                     }
                     } // End ZStack
@@ -723,6 +748,15 @@ struct WorkoutSessionView: View {
         restTimeRemaining = defaultRestTime
         restTimerActive = true
         
+        // Start the UI timer immediately
+        if restTimerCancellable == nil {
+            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    updateRestTimer()
+                }
+        }
+        
         // Persist timer state to UserDefaults
         saveRestTimerState()
         
@@ -745,24 +779,31 @@ struct WorkoutSessionView: View {
         let remainingTime = endTime.timeIntervalSince(currentTime)
         
         if remainingTime > 0 {
-            restTimeRemaining = remainingTime
+            // Only update UI state if the displayed second has changed (reduces re-renders)
+            let newDisplayTime = max(0, remainingTime)
+            let currentDisplaySecond = Int(restTimeRemaining)
+            let newDisplaySecond = Int(newDisplayTime)
             
-            // Warning haptic at 10 seconds remaining
-            if remainingTime <= 10 && remainingTime > 9 {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-                #if DEBUG
-                print("⚠️ Rest timer: 10 seconds remaining")
-                #endif
-            }
-            
-            // Final countdown haptic at 3, 2, 1
-            if remainingTime <= 3 && remainingTime > 0 {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                impactFeedback.impactOccurred()
-                #if DEBUG
-                print("⏰ Rest timer countdown: \(Int(remainingTime))")
-                #endif
+            if newDisplaySecond != currentDisplaySecond {
+                restTimeRemaining = newDisplayTime
+                
+                // Warning haptic at 10 seconds remaining (only once)
+                if newDisplaySecond == 10 {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                    #if DEBUG
+                    print("⚠️ Rest timer: 10 seconds remaining")
+                    #endif
+                }
+                
+                // Final countdown haptic at 3, 2, 1 (only once per second)
+                if newDisplaySecond <= 3 && newDisplaySecond > 0 {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    #if DEBUG
+                    print("⏰ Rest timer countdown: \(newDisplaySecond)")
+                    #endif
+                }
             }
         } else {
             // Rest time completed
@@ -776,6 +817,11 @@ struct WorkoutSessionView: View {
             restTimeRemaining = max(0, restTimerEndTime?.timeIntervalSince(Date()) ?? 0)
         }
         restTimerActive = false
+        
+        // Stop the rest timer UI updates
+        restTimerCancellable?.cancel()
+        restTimerCancellable = nil
+        
         clearRestTimerState()
         cancelRestTimerNotification()
         endBackgroundTask()
@@ -792,6 +838,15 @@ struct WorkoutSessionView: View {
         restTimeRemaining = defaultRestTime
         restTimerActive = true
         
+        // Start the UI timer immediately
+        if restTimerCancellable == nil {
+            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    updateRestTimer()
+                }
+        }
+        
         // Update persistence and notifications
         saveRestTimerState()
         scheduleRestTimerNotification()
@@ -805,6 +860,11 @@ struct WorkoutSessionView: View {
     private func skipRest() {
         restTimerActive = false
         restTimeRemaining = 0
+        
+        // Stop the rest timer UI updates
+        restTimerCancellable?.cancel()
+        restTimerCancellable = nil
+        
         clearRestTimerState()
         cancelRestTimerNotification()
         endBackgroundTask()
@@ -819,6 +879,11 @@ struct WorkoutSessionView: View {
     private func completeRestTimer() {
         restTimerActive = false
         restTimeRemaining = 0
+        
+        // Stop the rest timer UI updates
+        restTimerCancellable?.cancel()
+        restTimerCancellable = nil
+        
         clearRestTimerState()
         cancelRestTimerNotification()
         endBackgroundTask()
@@ -1160,26 +1225,34 @@ struct WorkoutSessionView: View {
     }
     
     private func startTimersIfNeeded() {
-        guard !timersAreRunning else { return }
+        // Always start workout timer if not running
+        if workoutTimerCancellable == nil {
+            workoutTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    updateWorkoutTime()
+                }
+            #if DEBUG
+            print("🔄 Workout timer started")
+            #endif
+        }
         
-        // Start workout timer
-        workoutTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { _ in
-                updateWorkoutTime()
-            }
+        // Start rest timer if not running and rest is active
+        if restTimerCancellable == nil && restTimerActive {
+            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    updateRestTimer()
+                }
+            #if DEBUG
+            print("🔄 Rest timer started")
+            #endif
+        }
         
-        // Start rest timer
-        restTimerCancellable = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { _ in
-                updateRestTimer()
-            }
-        
-        timersAreRunning = true
+        timersAreRunning = (workoutTimerCancellable != nil)
         
         #if DEBUG
-        print("🔄 Timers started")
+        print("🔄 Timers setup complete - workout: \(workoutTimerCancellable != nil), rest: \(restTimerCancellable != nil)")
         #endif
     }
     
@@ -1208,12 +1281,23 @@ struct WorkoutSessionView: View {
             #endif
             
         case .inactive, .background:
-            // App went to background - stop UI timers but keep timer state persisted
-            stopTimersIfRunning()
-            // Don't clear timer state - it should persist in background
-            #if DEBUG
-            print("📱 App went to background - stopping UI timers, keeping timer state")
-            #endif
+            // App went to background - keep rest timer running, only stop workout timer
+            if timersAreRunning {
+                // Only stop the workout timer, keep rest timer active
+                workoutTimerCancellable?.cancel()
+                // Keep rest timer running but reduce frequency for battery savings
+                if restTimerActive && restTimerCancellable != nil {
+                    restTimerCancellable?.cancel()
+                    restTimerCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
+                        .autoconnect()
+                        .sink { _ in
+                            updateRestTimer()
+                        }
+                }
+                #if DEBUG
+                print("📱 App went to background - stopped workout timer, reduced rest timer frequency")
+                #endif
+            }
             
         @unknown default:
             break
