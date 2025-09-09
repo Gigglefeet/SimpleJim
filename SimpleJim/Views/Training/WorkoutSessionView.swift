@@ -250,8 +250,8 @@ struct WorkoutSessionView: View {
             )
         }
         .onDisappear {
-            stopTimersIfRunning()
-            // Don't clear timer state on disappear - only clear when timer completes or is manually stopped
+            // Timer management is now handled by scene phase changes
+            // No need to stop timers here as they should persist through view changes
         }
     }
     
@@ -750,11 +750,7 @@ struct WorkoutSessionView: View {
         
         // Start the UI timer immediately
         if restTimerCancellable == nil {
-            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    updateRestTimer()
-                }
+            setRestTimerFrequency(0.5)
         }
         
         // Persist timer state to UserDefaults
@@ -840,11 +836,7 @@ struct WorkoutSessionView: View {
         
         // Start the UI timer immediately
         if restTimerCancellable == nil {
-            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    updateRestTimer()
-                }
+            setRestTimerFrequency(0.5)
         }
         
         // Update persistence and notifications
@@ -904,6 +896,27 @@ struct WorkoutSessionView: View {
         
         #if DEBUG
         print("✅ Rest timer completed!")
+        #endif
+    }
+    
+    // MARK: - Rest Timer Frequency Management
+    
+    private func setRestTimerFrequency(_ interval: TimeInterval) {
+        guard restTimerActive else { return }
+        
+        // Properly clean up existing timer
+        restTimerCancellable?.cancel()
+        restTimerCancellable = nil
+        
+        // Create new timer with specified frequency
+        restTimerCancellable = Timer.publish(every: interval, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                updateRestTimer()
+            }
+        
+        #if DEBUG
+        print("🔄 Rest timer frequency changed to \(interval)s")
         #endif
     }
     
@@ -1002,6 +1015,13 @@ struct WorkoutSessionView: View {
         content.body = "Your rest period is over. Time for your next set!"
         content.sound = .default
         content.categoryIdentifier = "REST_TIMER"
+        
+        // Add user info to help with navigation when notification is tapped
+        let sessionID = trainingSession.objectID.uriRepresentation().absoluteString
+        content.userInfo = [
+            "type": "rest_timer_complete",
+            "sessionID": sessionID
+        ]
         
         let timeInterval = endTime.timeIntervalSince(Date())
         guard timeInterval > 0 else { return }
@@ -1199,6 +1219,18 @@ struct WorkoutSessionView: View {
     private func finishWorkout() {
         isFinishing = true
         
+        // Cancel any pending rest timer notifications since workout is ending
+        cancelRestTimerNotification()
+        
+        // Stop and clean up all timers since workout is complete
+        if restTimerActive {
+            restTimerActive = false
+            restTimerCancellable?.cancel()
+            restTimerCancellable = nil
+            clearRestTimerState()
+            endBackgroundTask()
+        }
+        
         // Set end time
         let endTime = Date()
         trainingSession.setValue(endTime, forKey: "endTime")
@@ -1239,20 +1271,16 @@ struct WorkoutSessionView: View {
         
         // Start rest timer if not running and rest is active
         if restTimerCancellable == nil && restTimerActive {
-            restTimerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    updateRestTimer()
-                }
+            setRestTimerFrequency(0.5)
             #if DEBUG
-            print("🔄 Rest timer started")
+            print("🔄 Rest timer started via startTimersIfNeeded")
             #endif
         }
         
-        timersAreRunning = (workoutTimerCancellable != nil)
+        timersAreRunning = (workoutTimerCancellable != nil || restTimerCancellable != nil)
         
         #if DEBUG
-        print("🔄 Timers setup complete - workout: \(workoutTimerCancellable != nil), rest: \(restTimerCancellable != nil)")
+        print("🔄 Timers setup complete - workout: \(workoutTimerCancellable != nil), rest: \(restTimerCancellable != nil), timersAreRunning: \(timersAreRunning)")
         #endif
     }
     
@@ -1260,11 +1288,13 @@ struct WorkoutSessionView: View {
         guard timersAreRunning else { return }
         
         workoutTimerCancellable?.cancel()
+        workoutTimerCancellable = nil
         restTimerCancellable?.cancel()
+        restTimerCancellable = nil
         timersAreRunning = false
         
         #if DEBUG
-        print("⏹️ Timers stopped")
+        print("⏹️ Timers stopped and cleaned up")
         #endif
     }
     
@@ -1283,16 +1313,13 @@ struct WorkoutSessionView: View {
         case .inactive, .background:
             // App went to background - keep rest timer running, only stop workout timer
             if timersAreRunning {
-                // Only stop the workout timer, keep rest timer active
+                // Stop the workout timer and set to nil so it can be restarted later
                 workoutTimerCancellable?.cancel()
+                workoutTimerCancellable = nil
+                
                 // Keep rest timer running but reduce frequency for battery savings
                 if restTimerActive && restTimerCancellable != nil {
-                    restTimerCancellable?.cancel()
-                    restTimerCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
-                        .autoconnect()
-                        .sink { _ in
-                            updateRestTimer()
-                        }
+                    setRestTimerFrequency(1.0)
                 }
                 #if DEBUG
                 print("📱 App went to background - stopped workout timer, reduced rest timer frequency")
