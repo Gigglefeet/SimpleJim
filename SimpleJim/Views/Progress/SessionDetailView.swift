@@ -46,6 +46,15 @@ struct SessionDetailView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            HStack(spacing: 16) {
+                if session.sleepHours > 0 {
+                    stat("Sleep", String(format: "%.1fh", session.sleepHours), color: .blue, icon: "moon.stars.fill")
+                }
+                if session.proteinGrams > 0 {
+                    stat("Protein", "\(Int(session.proteinGrams))g", color: .green, icon: "fork.knife.circle.fill")
+                }
+            }
         }
     }
     

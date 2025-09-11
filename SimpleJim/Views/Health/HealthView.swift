@@ -13,6 +13,7 @@ struct HealthView: View {
     @State private var viewMode: ViewMode = .month
     @State private var showingDetailSheet = false
     @State private var selectedDayData: DayData?
+    @State private var selectedSession: TrainingSession?
     
     // Get user's goals from profile settings
     @AppStorage("sleepGoal") private var sleepGoal: Double = 8.0
@@ -56,7 +57,7 @@ struct HealthView: View {
         }
         .sheet(isPresented: $showingDetailSheet) {
             if let dayData = selectedDayData {
-                DayDetailView(dayData: dayData)
+                DayDetailView(dayData: dayData, session: selectedSession)
             }
         }
     }
@@ -143,6 +144,7 @@ struct HealthView: View {
                 )
                 .onTapGesture {
                     selectedDayData = dayData
+                    selectedSession = getTrainingSession(for: dayData.date)
                     showingDetailSheet = true
                 }
             }
@@ -160,6 +162,7 @@ struct HealthView: View {
                 )
                 .onTapGesture {
                     selectedDayData = dayData
+                    selectedSession = getTrainingSession(for: dayData.date)
                     showingDetailSheet = true
                 }
             }
@@ -548,6 +551,7 @@ struct WeekDayRowView: View {
 
 struct DayDetailView: View {
     let dayData: DayData
+    let session: TrainingSession?
     @Environment(\.dismiss) private var dismiss
     
     private var dayName: String {
@@ -661,6 +665,13 @@ struct DayDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
+                    }
+                }
+                if let session = session {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        NavigationLink(destination: SessionDetailView(session: session)) {
+                            Text("View Workout")
+                        }
                     }
                 }
             }
