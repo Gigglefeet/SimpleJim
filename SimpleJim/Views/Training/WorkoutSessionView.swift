@@ -671,14 +671,16 @@ struct WorkoutSessionView: View {
     
     private func setupWorkoutSession() {
         // Ensure idempotency: only create missing CompletedExercises/sets
-        let existingByTemplate: [ExerciseTemplate: CompletedExercise] = Dictionary(uniqueKeysWithValues: trainingSession.sortedCompletedExercises.compactMap { completed in
+        // Map existing completed exercises by template ID (avoid NSManagedObject as Dictionary key)
+        let existingByTemplateId: [String: CompletedExercise] = Dictionary(uniqueKeysWithValues: trainingSession.sortedCompletedExercises.compactMap { completed in
             guard let template = completed.template else { return nil }
-            return (template, completed)
+            return (template.objectID.uriRepresentation().absoluteString, completed)
         })
 
         for exerciseTemplate in dayTemplate.sortedExerciseTemplates {
             let completedExercise: CompletedExercise
-            if let existing = existingByTemplate[exerciseTemplate] {
+            let templateId = exerciseTemplate.objectID.uriRepresentation().absoluteString
+            if let existing = existingByTemplateId[templateId] {
                 completedExercise = existing
             } else {
                 let newCompleted = CompletedExercise(context: viewContext)
@@ -689,8 +691,9 @@ struct WorkoutSessionView: View {
 
             // Ensure sets exist up to targetSets without duplicating
             let currentSets = completedExercise.sets
-            if currentSets.count < exerciseTemplate.targetSets {
-                for setIndex in currentSets.count..<exerciseTemplate.targetSets {
+            let targetSetCount = Int(exerciseTemplate.targetSets)
+            if currentSets.count < targetSetCount {
+                for setIndex in currentSets.count..<targetSetCount {
                     let exerciseSet = ExerciseSet(context: viewContext)
                     exerciseSet.order = Int16(setIndex)
                     exerciseSet.weight = 0
