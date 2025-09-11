@@ -579,6 +579,10 @@ struct WorkoutSessionView: View {
                             }
                             .padding()
                         }
+                        .onTapGesture {
+                            // Dismiss keyboard when tapping outside inputs
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
                         .offset(x: dragOffset)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
                         .gesture(
@@ -1411,6 +1415,8 @@ struct SetRowView: View {
     @State private var saveWorkItem: DispatchWorkItem?
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
+    @FocusState private var focusedField: Field?
+    private enum Field { case weight, reps }
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -1479,6 +1485,7 @@ struct SetRowView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
+                        .focused($focusedField, equals: .weight)
                         .onChange(of: weightString) { newValue in
                             // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
@@ -1534,6 +1541,7 @@ struct SetRowView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.numberPad)
                         .frame(width: 60)
+                        .focused($focusedField, equals: .reps)
                         .onChange(of: repsString) { newValue in
                             // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber }
