@@ -204,6 +204,7 @@ struct WorkoutSessionView: View {
         }
         .onAppear {
             setupWorkoutSession()
+            restoreNavigationStateIfAvailable()
             loadRestTimerSettings()
             requestNotificationPermissions()
             restoreRestTimerIfNeeded()
@@ -211,6 +212,12 @@ struct WorkoutSessionView: View {
         }
         .onChange(of: scenePhase) { newPhase in
             handleScenePhaseChange(newPhase)
+        }
+        .onChange(of: currentGroupIndex) { _ in
+            saveNavigationState()
+        }
+        .onChange(of: currentExerciseInGroup) { _ in
+            saveNavigationState()
         }
         .alert("Finish Workout?", isPresented: $showingFinishAlert) {
             Button("Cancel", role: .cancel) { }
@@ -663,30 +670,40 @@ struct WorkoutSessionView: View {
     // MARK: - Helper Methods
     
     private func setupWorkoutSession() {
-        // Create completed exercises for each template
+        // Ensure idempotency: only create missing CompletedExercises/sets
+        let existingByTemplate: [ExerciseTemplate: CompletedExercise] = Dictionary(uniqueKeysWithValues: trainingSession.sortedCompletedExercises.compactMap { completed in
+            guard let template = completed.template else { return nil }
+            return (template, completed)
+        })
+
         for exerciseTemplate in dayTemplate.sortedExerciseTemplates {
-            let completedExercise = CompletedExercise(context: viewContext)
-            completedExercise.template = exerciseTemplate
-            completedExercise.session = trainingSession
-            
-            // Create sets based on target sets
-            for setIndex in 0..<exerciseTemplate.targetSets {
-                let exerciseSet = ExerciseSet(context: viewContext)
-                exerciseSet.order = Int16(setIndex)
-                exerciseSet.weight = 0
-                exerciseSet.reps = 0
-                exerciseSet.isCompleted = false
-                exerciseSet.completedExercise = completedExercise
-                
-                // Also add to the other side of the relationship
-                completedExercise.addToExerciseSets(exerciseSet)
+            let completedExercise: CompletedExercise
+            if let existing = existingByTemplate[exerciseTemplate] {
+                completedExercise = existing
+            } else {
+                let newCompleted = CompletedExercise(context: viewContext)
+                newCompleted.template = exerciseTemplate
+                newCompleted.session = trainingSession
+                completedExercise = newCompleted
+            }
+
+            // Ensure sets exist up to targetSets without duplicating
+            let currentSets = completedExercise.sets
+            if currentSets.count < exerciseTemplate.targetSets {
+                for setIndex in currentSets.count..<exerciseTemplate.targetSets {
+                    let exerciseSet = ExerciseSet(context: viewContext)
+                    exerciseSet.order = Int16(setIndex)
+                    exerciseSet.weight = 0
+                    exerciseSet.reps = 0
+                    exerciseSet.isCompleted = false
+                    exerciseSet.completedExercise = completedExercise
+                    completedExercise.addToExerciseSets(exerciseSet)
+                }
             }
         }
-        
+
         do {
             try viewContext.save()
-            
-            // Refresh the training session to pick up the new relationships
             viewContext.refresh(trainingSession, mergeChanges: true)
         } catch {
             #if DEBUG
@@ -1128,13 +1145,13 @@ struct WorkoutSessionView: View {
         
         // Find and delete the completed exercise associated with this template
         if let completedExercise = trainingSession.sortedCompletedExercises.first(where: { $0.template == exercise }) {
-            // Delete all sets first
-            if let sets = completedExercise.exerciseSets {
-                for set in sets {
-                    viewContext.delete(set as! NSManagedObject)
+            // Delete all sets first (avoid force casts)
+            if let nsset = completedExercise.exerciseSets, let typedSets = nsset as? Set<ExerciseSet> {
+                for set in typedSets {
+                    viewContext.delete(set)
                 }
             }
-            
+
             // Delete the completed exercise
             viewContext.delete(completedExercise)
         }
@@ -1170,6 +1187,48 @@ struct WorkoutSessionView: View {
             print("❌ Error deleting exercise: \(error)")
             #endif
         }
+    }
+
+    // MARK: - Navigation State Persistence
+
+    private func navigationKey(_ base: String) -> String {
+        let sessionID = trainingSession.objectID.uriRepresentation().absoluteString
+        return "WorkoutNav.\(base).\(sessionID)"
+    }
+
+    private func saveNavigationState() {
+        UserDefaults.standard.set(currentGroupIndex, forKey: navigationKey("group"))
+        UserDefaults.standard.set(currentExerciseInGroup, forKey: navigationKey("exercise"))
+        #if DEBUG
+        print("💾 Saved nav state: group=\(currentGroupIndex), exercise=\(currentExerciseInGroup)")
+        #endif
+    }
+
+    private func restoreNavigationStateIfAvailable() {
+        let groupKey = navigationKey("group")
+        let exerciseKey = navigationKey("exercise")
+        let hasGroup = UserDefaults.standard.object(forKey: groupKey) != nil
+        let hasExercise = UserDefaults.standard.object(forKey: exerciseKey) != nil
+        guard hasGroup || hasExercise else { return }
+
+        var restoredGroup = UserDefaults.standard.integer(forKey: groupKey)
+        var restoredExercise = UserDefaults.standard.integer(forKey: exerciseKey)
+
+        // Clamp to current template bounds
+        if exerciseGroups.isEmpty {
+            restoredGroup = 0
+            restoredExercise = 0
+        } else {
+            restoredGroup = max(0, min(restoredGroup, max(0, exerciseGroups.count - 1)))
+            let exercisesCount = exerciseGroups[safe: restoredGroup]?.exercises.count ?? 0
+            restoredExercise = max(0, min(restoredExercise, max(0, exercisesCount - 1)))
+        }
+
+        currentGroupIndex = restoredGroup
+        currentExerciseInGroup = restoredExercise
+        #if DEBUG
+        print("🔄 Restored nav state: group=\(currentGroupIndex), exercise=\(currentExerciseInGroup)")
+        #endif
     }
     
     private func addSet() {
@@ -1358,7 +1417,9 @@ struct SetRowView: View {
     }
     
     var bodyweightDisplay: String {
-        let bodyweight = set.session?.userBodyweight ?? UserDefaults.standard.double(forKey: "defaultBodyweight") != 0 ? UserDefaults.standard.double(forKey: "defaultBodyweight") : 70.0
+        let defaultBW = UserDefaults.standard.double(forKey: "defaultBodyweight")
+        let fallbackBW = defaultBW != 0 ? defaultBW : 70.0
+        let bodyweight = set.session?.userBodyweight ?? fallbackBW
         let total = bodyweight + set.extraWeight
         if set.extraWeight > 0 {
             return "\(Int(bodyweight))kg + \(Int(set.extraWeight))kg = \(Int(total))kg"

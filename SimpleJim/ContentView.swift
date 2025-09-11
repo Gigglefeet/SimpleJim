@@ -45,7 +45,8 @@ struct ContentView: View {
         }
     }
     
-    /// Recovers orphaned workout sessions by setting their end times
+    /// Recovers clearly orphaned workout sessions by setting their end times.
+    /// Avoids touching very recent in-progress sessions to prevent nuking an active workout on app wake.
     private func cleanupOrphanedSessions() {
         let request: NSFetchRequest<TrainingSession> = TrainingSession.fetchRequest()
         request.predicate = NSPredicate(format: "startTime != nil AND endTime == nil")
@@ -58,22 +59,26 @@ struct ContentView: View {
                 print("🔧 Found \(orphanedSessions.count) orphaned workout session(s), cleaning up...")
                 #endif
                 
+                let now = Date()
+                // Only close sessions that started sufficiently long ago (e.g., > 6 hours)
+                // so we don't prematurely end an active session after sleep/background.
                 for session in orphanedSessions {
+                    guard let startTime = session.startTime else { continue }
+                    let hoursSinceStart = now.timeIntervalSince(startTime) / 3600.0
+                    guard hoursSinceStart > 6 else { continue }
                     // Set end time to a reasonable estimate (3 hours after start time or last set time)
-                    if let startTime = session.startTime {
-                        let estimatedEndTime = Calendar.current.date(byAdding: .hour, value: 3, to: startTime) ?? startTime
-                        session.setValue(estimatedEndTime, forKey: "endTime")
-                        
-                        #if DEBUG
-                        print("🔧 Recovered session from \(startTime) to \(estimatedEndTime)")
-                        #endif
-                    }
+                    let estimatedEndTime = Calendar.current.date(byAdding: .hour, value: 3, to: startTime) ?? startTime
+                    session.setValue(estimatedEndTime, forKey: "endTime")
+                    
+                    #if DEBUG
+                    print("🔧 Recovered stale session from \(startTime) to \(estimatedEndTime)")
+                    #endif
                 }
                 
                 try viewContext.save()
                 
                 #if DEBUG
-                print("✅ Successfully recovered \(orphanedSessions.count) orphaned session(s)")
+                print("✅ Orphaned session cleanup completed")
                 #endif
             }
         } catch {

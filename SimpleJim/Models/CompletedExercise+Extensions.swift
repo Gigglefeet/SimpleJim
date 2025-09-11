@@ -33,7 +33,9 @@ extension ExerciseSet {
     /// The effective weight used for calculations (bodyweight + extra weight if bodyweight exercise, otherwise just weight)
     var effectiveWeight: Double {
         if isBodyweight {
-            let bodyweight = session?.userBodyweight ?? UserDefaults.standard.double(forKey: "defaultBodyweight") != 0 ? UserDefaults.standard.double(forKey: "defaultBodyweight") : 70.0
+            let defaultBW = UserDefaults.standard.double(forKey: "defaultBodyweight")
+            let fallbackBW = defaultBW != 0 ? defaultBW : 70.0
+            let bodyweight = session?.userBodyweight ?? fallbackBW
             return bodyweight + extraWeight
         } else {
             return weight
