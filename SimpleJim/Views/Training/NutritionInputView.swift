@@ -177,7 +177,7 @@ struct NutritionInputView: View {
                 Button(action: saveNutrition) {
                     HStack {
                         if isSaving {
-                            ProgressView()
+                            TrainingProgressView()
                                 .scaleEffect(0.8)
                                 .foregroundColor(.white)
                         }

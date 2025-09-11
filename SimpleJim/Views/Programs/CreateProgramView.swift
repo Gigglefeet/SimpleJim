@@ -46,7 +46,7 @@ struct CreateProgramView: View {
                     Button(action: createProgram) {
                         HStack {
                             if isCreating {
-                                ProgressView()
+                                TrainingProgressView()
                                     .scaleEffect(0.8)
                             }
                             

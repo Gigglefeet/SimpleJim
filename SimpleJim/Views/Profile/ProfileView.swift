@@ -333,7 +333,7 @@ struct ExportDataView: View {
                 }) {
                     HStack {
                         if isExporting {
-                            ProgressView()
+                            TrainingProgressView()
                                 .scaleEffect(0.8)
                                 .foregroundColor(.white)
                         }

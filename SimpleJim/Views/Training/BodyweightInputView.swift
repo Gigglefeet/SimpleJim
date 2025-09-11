@@ -92,7 +92,7 @@ struct BodyweightInputView: View {
                 Button(action: saveBodyweight) {
                     HStack {
                         if isSaving {
-                            ProgressView()
+                            TrainingProgressView()
                                 .scaleEffect(0.8)
                                 .foregroundColor(.white)
                         }

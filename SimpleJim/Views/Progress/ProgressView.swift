@@ -2,7 +2,7 @@ import SwiftUI
 import CoreData
 import Charts
 
-struct ProgressView: View {
+struct TrainingProgressView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \TrainingSession.date, ascending: false)],
@@ -379,7 +379,8 @@ struct ProgressView: View {
                 emptyStateView
             } else {
                 ForEach(Array(filteredSessions.prefix(5)), id: \.objectID) { session in
-                    HStack {
+                    NavigationLink(destination: SessionDetailView(session: session)) {
+                        HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(session.template?.name ?? "Unknown Workout")
                                 .font(.headline)
@@ -432,6 +433,7 @@ struct ProgressView: View {
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(8)
+                    }
                 }
             }
         }
@@ -661,9 +663,9 @@ struct StatCard: View {
     }
 }
 
-struct ProgressView_Previews: PreviewProvider {
+struct TrainingProgressView_Previews: PreviewProvider {
     static var previews: some View {
-        ProgressView()
+        TrainingProgressView()
             .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 } 

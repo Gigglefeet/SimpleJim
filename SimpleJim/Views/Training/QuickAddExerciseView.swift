@@ -161,7 +161,7 @@ struct QuickAddExerciseView: View {
                         }) {
                             HStack {
                                 if isCreating {
-                                    ProgressView()
+                                    TrainingProgressView()
                                         .scaleEffect(0.8)
                                 } else {
                                     Image(systemName: "plus.circle.fill")

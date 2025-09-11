@@ -13,6 +13,7 @@
 		1A00100A /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001009 /* PersistenceController.swift */; };
 		1A00101A /* AddExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001019 /* AddExerciseView.swift */; };
 		1A001022 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001021 /* ProgressView.swift */; };
+		1A00105B /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00105C /* SessionDetailView.swift */; };
 		1A001024 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001023 /* ProfileView.swift */; };
 		1A00103A /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A001039 /* ProgramListView.swift */; };
 		1A00103C /* CreateProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00103B /* CreateProgramView.swift */; };
@@ -42,6 +43,7 @@
 		1A001009 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		1A001019 /* AddExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExerciseView.swift; sourceTree = "<group>"; };
 		1A001021 /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
+		1A00105C /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		1A001023 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		1A001039 /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
 		1A00103B /* CreateProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProgramView.swift; sourceTree = "<group>"; };
@@ -152,6 +154,7 @@
 			isa = PBXGroup;
 			children = (
 				1A001021 /* ProgressView.swift */,
+				1A00105C /* SessionDetailView.swift */,
 			);
 			path = Progress;
 			sourceTree = "<group>";
@@ -260,6 +263,7 @@
 				1A001008 /* SimpleJim.xcdatamodeld in Sources */,
 				1A00101A /* AddExerciseView.swift in Sources */,
 				1A001022 /* ProgressView.swift in Sources */,
+				1A00105B /* SessionDetailView.swift in Sources */,
 				1A001024 /* ProfileView.swift in Sources */,
 				1A001040 /* TrainingProgram+Extensions.swift in Sources */,
 				1A001042 /* TrainingDayTemplate+Extensions.swift in Sources */,
