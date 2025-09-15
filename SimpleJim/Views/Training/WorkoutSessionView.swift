@@ -1099,28 +1099,26 @@ struct WorkoutSessionView: View {
     // MARK: - Background Task Management
     
     private func startBackgroundTask() {
-        guard backgroundTaskID == .invalid else { return }
-        
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
-            // Background task expiration handler
-            // The system will handle cleanup automatically if the task expires
-            // We can't capture self here since SwiftUI Views are structs
+        DispatchQueue.main.async {
+            guard backgroundTaskID == .invalid else { return }
+            backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
+                // Background task expiration handler
+            }
+            #if DEBUG
+            print("🌙 Started background task for rest timer")
+            #endif
         }
-        
-        #if DEBUG
-        print("🌙 Started background task for rest timer")
-        #endif
     }
     
     private func endBackgroundTask() {
-        guard backgroundTaskID != .invalid else { return }
-        
-        UIApplication.shared.endBackgroundTask(backgroundTaskID)
-        backgroundTaskID = .invalid
-        
-        #if DEBUG
-        print("🌅 Ended background task for rest timer")
-        #endif
+        DispatchQueue.main.async {
+            guard backgroundTaskID != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+            #if DEBUG
+            print("🌅 Ended background task for rest timer")
+            #endif
+        }
     }
     
     // MARK: - Dynamic Exercise Management
@@ -1514,6 +1512,7 @@ struct SetRowView: View {
                         .frame(width: 80)
                         .focused($focusedField, equals: .weight)
                         .onTapGesture {
+                            focusedField = .weight
                             editingFocus = .weight(setIdString)
                         }
                         .onChange(of: weightString) { newValue in
@@ -1573,6 +1572,7 @@ struct SetRowView: View {
                         .frame(width: 60)
                         .focused($focusedField, equals: .reps)
                         .onTapGesture {
+                            focusedField = .reps
                             editingFocus = .reps(setIdString)
                         }
                         .onChange(of: repsString) { newValue in
@@ -1629,9 +1629,17 @@ struct SetRowView: View {
             guard let newValue = newValue else { return }
             switch newValue {
             case .weight(let id):
-                if id == setIdString { focusedField = .weight }
+                if id == setIdString {
+                    DispatchQueue.main.async {
+                        focusedField = .weight
+                    }
+                }
             case .reps(let id):
-                if id == setIdString { focusedField = .reps }
+                if id == setIdString {
+                    DispatchQueue.main.async {
+                        focusedField = .reps
+                    }
+                }
             }
         }
         .onAppear {
