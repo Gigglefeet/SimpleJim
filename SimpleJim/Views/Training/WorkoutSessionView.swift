@@ -3,6 +3,12 @@ import CoreData
 import Combine
 import UserNotifications
 
+// MARK: - Shared Focus Key For Set Inputs
+enum EditingFocus: Hashable {
+    case weight(String) // NSManagedObjectID URI
+    case reps(String)
+}
+
 struct WorkoutSessionView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -43,6 +49,13 @@ struct WorkoutSessionView: View {
     @State private var workoutTimerCancellable: AnyCancellable?
     @State private var restTimerCancellable: AnyCancellable?
     @State private var timersAreRunning = false
+    @FocusState private var focusedEditingField: EditingFocus?
+    private var editingFocusBinding: Binding<EditingFocus?> {
+        Binding(
+            get: { focusedEditingField },
+            set: { focusedEditingField = $0 }
+        )
+    }
     
     // Background timer persistence
     @State private var restTimerStartTime: Date?
@@ -381,9 +394,57 @@ struct WorkoutSessionView: View {
                         
                         // Main content with swipe gesture
                         ScrollView(.vertical, showsIndicators: true) {
-                            VStack(spacing: 20) {
-                            // Exercise info with superset context
-                            VStack(spacing: 8) {
+                            exerciseDetailContent(exercise: exercise)
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                        .offset(x: dragOffset)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    guard canDeleteCurrentExercise && focusedEditingField == nil else { return }
+                                    let horizontalMovement = abs(value.translation.width)
+                                    let verticalMovement = abs(value.translation.height)
+                                    if horizontalMovement > verticalMovement &&
+                                       horizontalMovement > 20 &&
+                                       verticalMovement < 30 {
+                                        isDragging = true
+                                        dragOffset = min(0, value.translation.width)
+                                    }
+                                }
+                                .onEnded { value in
+                                    guard canDeleteCurrentExercise && focusedEditingField == nil else {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { dragOffset = 0 }
+                                        return
+                                    }
+                                    isDragging = false
+                                    let horizontalMovement = abs(value.translation.width)
+                                    let verticalMovement = abs(value.translation.height)
+                                    if dragOffset < -100 &&
+                                       horizontalMovement > verticalMovement &&
+                                       horizontalMovement > 50 {
+                                        showingDeleteConfirmation = true
+                                    }
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                        )
+                    } // End ZStack
+                } else {
+                    Text("No exercises in this workout")
+                        .foregroundColor(.secondary)
+                }
+        }
+    }
+
+    // MARK: - Extracted Content Builders
+
+    @ViewBuilder
+    private func exerciseDetailContent(exercise: ExerciseTemplate) -> some View {
+        VStack(spacing: 20) {
+            // Exercise info with superset context
+            VStack(spacing: 8) {
                                 // Superset indicator
                                 if isInSuperset, let group = currentGroup {
                                     HStack(spacing: 8) {
@@ -445,11 +506,11 @@ struct WorkoutSessionView: View {
                                     }
                                     .padding(.top, 4)
                                 }
-                            }
-                            .padding()
-                            
-                            // Sets
-                            VStack(spacing: 12) {
+            }
+            .padding()
+            
+            // Sets
+            VStack(spacing: 12) {
                                 HStack {
                                     Text("Sets")
                                         .font(.headline)
@@ -477,41 +538,41 @@ struct WorkoutSessionView: View {
                                     }
                                 }
                                 
-                                LazyVStack(spacing: 8) {
-                                    ForEach(getSetsForCurrentExercise()) { set in
-                                        SetRowView(set: set, setNumber: Int(set.order) + 1) {
-                                            // Auto-start rest timer when any set is completed
-                                            startRestTimer()
-                                        }
-                                    }
-                                }
-                            }
-                            .padding()
-                            
-                            // Rest Timer Section
-                            if restTimerActive {
-                                RestTimerView(
-                                    timeRemaining: $restTimeRemaining,
-                                    defaultTime: $defaultRestTime,
-                                    isActive: $restTimerActive,
-                                    onSettingsPressed: {
-                                        showingRestSettings = true
-                                    },
-                                    onSkipPressed: {
-                                        skipRest()
-                                    },
-                                    onPausePressed: {
-                                        pauseRest()
-                                    },
-                                    onResetPressed: {
-                                        resetRest()
-                                    }
-                                )
-                                .padding()
-                            }
-                            
-                            // Navigation buttons
-                            VStack(spacing: 12) {
+                LazyVStack(spacing: 8) {
+                    ForEach(getSetsForCurrentExercise()) { set in
+                        SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
+                            // Auto-start rest timer when any set is completed
+                            startRestTimer()
+                        }
+                    }
+                }
+            }
+            .padding()
+            
+            // Rest Timer Section
+            if restTimerActive {
+                RestTimerView(
+                    timeRemaining: $restTimeRemaining,
+                    defaultTime: $defaultRestTime,
+                    isActive: $restTimerActive,
+                    onSettingsPressed: {
+                        showingRestSettings = true
+                    },
+                    onSkipPressed: {
+                        skipRest()
+                    },
+                    onPausePressed: {
+                        pauseRest()
+                    },
+                    onResetPressed: {
+                        resetRest()
+                    }
+                )
+                .padding()
+            }
+            
+            // Navigation buttons
+            VStack(spacing: 12) {
                                 HStack(spacing: 20) {
                                     if canGoToPreviousExercise {
                                         Button("Previous") {
@@ -576,61 +637,8 @@ struct WorkoutSessionView: View {
                                     }
                                     .padding(.top, 4)
                                 }
-                            }
-                            .padding()
-                        }
-                        .onTapGesture {
-                            // Dismiss keyboard when tapping outside inputs
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        }
-                        .offset(x: dragOffset)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
-                        .gesture(
-                            // Only apply drag gesture when deletion is possible
-                            canDeleteCurrentExercise ? 
-                            AnyGesture(
-                                DragGesture()
-                                    .onChanged { value in
-                                        // Only activate for clear horizontal swipes
-                                        let horizontalMovement = abs(value.translation.width)
-                                        let verticalMovement = abs(value.translation.height)
-                                        
-                                        // Require significant horizontal movement and minimal vertical
-                                        if horizontalMovement > verticalMovement && 
-                                           horizontalMovement > 20 && 
-                                           verticalMovement < 30 {
-                                            isDragging = true
-                                            // Only allow left swipe
-                                            dragOffset = min(0, value.translation.width)
-                                        }
-                                    }
-                                    .onEnded { value in
-                                        isDragging = false
-                                        
-                                        // Only trigger delete for clear horizontal swipes
-                                        let horizontalMovement = abs(value.translation.width)
-                                        let verticalMovement = abs(value.translation.height)
-                                        
-                                        if dragOffset < -100 && 
-                                           horizontalMovement > verticalMovement &&
-                                           horizontalMovement > 50 {
-                                            // Trigger delete confirmation
-                                            showingDeleteConfirmation = true
-                                        }
-                                        
-                                        // Reset position
-                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                            dragOffset = 0
-                                        }
-                                    }
-                            ) : nil
-                        )
-                    }
-                    } // End ZStack
-                } else {
-                    Text("No exercises in this workout")
-                        .foregroundColor(.secondary)
-                }
+            }
+            .padding()
         }
     }
     
@@ -1417,6 +1425,7 @@ struct SetRowView: View {
     @State private var errorMessage = ""
     @FocusState private var focusedField: Field?
     private enum Field { case weight, reps }
+    @Binding var editingFocus: EditingFocus?
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -1486,6 +1495,13 @@ struct SetRowView: View {
                         .keyboardType(.decimalPad)
                         .frame(width: 80)
                         .focused($focusedField, equals: .weight)
+                        .onTapGesture {
+                            let id = set.objectID.uriRepresentation().absoluteString
+                            editingFocus = .weight(id)
+                        }
+                        .onChange(of: focusedField) { newValue in
+                            if newValue != .weight { editingFocus = nil }
+                        }
                         .onChange(of: weightString) { newValue in
                             // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber || $0 == "." }
@@ -1542,6 +1558,13 @@ struct SetRowView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 60)
                         .focused($focusedField, equals: .reps)
+                        .onTapGesture {
+                            let id = set.objectID.uriRepresentation().absoluteString
+                            editingFocus = .reps(id)
+                        }
+                        .onChange(of: focusedField) { newValue in
+                            if newValue != .reps { editingFocus = nil }
+                        }
                         .onChange(of: repsString) { newValue in
                             // Validate input without immediately updating the binding
                             let filteredValue = newValue.filter { $0.isNumber }
