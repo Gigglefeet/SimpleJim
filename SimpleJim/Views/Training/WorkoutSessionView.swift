@@ -396,13 +396,16 @@ struct WorkoutSessionView: View {
                         ScrollView(.vertical, showsIndicators: true) {
                             exerciseDetailContent(exercise: exercise)
                         }
-                        .scrollDismissesKeyboard(.interactively)
+                        .scrollDismissesKeyboard(.never)
                         .offset(x: dragOffset)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: dragOffset)
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
-                                    guard canDeleteCurrentExercise && focusedEditingField == nil else { return }
+                                    guard canDeleteCurrentExercise && focusedEditingField == nil else {
+                                        isDragging = false
+                                        return
+                                    }
                                     let horizontalMovement = abs(value.translation.width)
                                     let verticalMovement = abs(value.translation.height)
                                     if horizontalMovement > verticalMovement &&
@@ -543,33 +546,44 @@ struct WorkoutSessionView: View {
                         SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
                             // Auto-start rest timer when any set is completed
                             startRestTimer()
+                            // If user completes set N, auto-advance focus to next set's weight field
+                            DispatchQueue.main.async {
+                                if let next = getSetsForCurrentExercise().first(where: { Int($0.order) == Int(set.order) + 1 }) {
+                                    let id = next.objectID.uriRepresentation().absoluteString
+                                    focusedEditingField = .weight(id)
+                                }
+                            }
                         }
                     }
                 }
             }
             .padding()
             
-            // Rest Timer Section
-            if restTimerActive {
-                RestTimerView(
-                    timeRemaining: $restTimeRemaining,
-                    defaultTime: $defaultRestTime,
-                    isActive: $restTimerActive,
-                    onSettingsPressed: {
-                        showingRestSettings = true
-                    },
-                    onSkipPressed: {
-                        skipRest()
-                    },
-                    onPausePressed: {
-                        pauseRest()
-                    },
-                    onResetPressed: {
-                        resetRest()
-                    }
-                )
-                .padding()
+            // Rest Timer Section (reserve constant height to avoid layout-induced focus loss)
+            ZStack {
+                if restTimerActive {
+                    RestTimerView(
+                        timeRemaining: $restTimeRemaining,
+                        defaultTime: $defaultRestTime,
+                        isActive: $restTimerActive,
+                        onSettingsPressed: {
+                            showingRestSettings = true
+                        },
+                        onSkipPressed: {
+                            skipRest()
+                        },
+                        onPausePressed: {
+                            pauseRest()
+                        },
+                        onResetPressed: {
+                            resetRest()
+                        }
+                    )
+                    .padding()
+                }
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: 190)
             
             // Navigation buttons
             VStack(spacing: 12) {
@@ -901,6 +915,7 @@ struct WorkoutSessionView: View {
     // MARK: - Timer Completion and Restoration
     
     private func completeRestTimer() {
+        // Preserve any active editing focus; do NOT nil it here
         restTimerActive = false
         restTimeRemaining = 0
         
@@ -927,7 +942,7 @@ struct WorkoutSessionView: View {
         }
         
         #if DEBUG
-        print("✅ Rest timer completed!")
+        print("✅ Rest timer completed! (focus preserved: \(String(describing: focusedEditingField)))")
         #endif
     }
     
@@ -1426,6 +1441,9 @@ struct SetRowView: View {
     @FocusState private var focusedField: Field?
     private enum Field { case weight, reps }
     @Binding var editingFocus: EditingFocus?
+    private var setIdString: String {
+        `set`.objectID.uriRepresentation().absoluteString
+    }
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -1496,11 +1514,7 @@ struct SetRowView: View {
                         .frame(width: 80)
                         .focused($focusedField, equals: .weight)
                         .onTapGesture {
-                            let id = set.objectID.uriRepresentation().absoluteString
-                            editingFocus = .weight(id)
-                        }
-                        .onChange(of: focusedField) { newValue in
-                            if newValue != .weight { editingFocus = nil }
+                            editingFocus = .weight(setIdString)
                         }
                         .onChange(of: weightString) { newValue in
                             // Validate input without immediately updating the binding
@@ -1559,11 +1573,7 @@ struct SetRowView: View {
                         .frame(width: 60)
                         .focused($focusedField, equals: .reps)
                         .onTapGesture {
-                            let id = set.objectID.uriRepresentation().absoluteString
-                            editingFocus = .reps(id)
-                        }
-                        .onChange(of: focusedField) { newValue in
-                            if newValue != .reps { editingFocus = nil }
+                            editingFocus = .reps(setIdString)
                         }
                         .onChange(of: repsString) { newValue in
                             // Validate input without immediately updating the binding
@@ -1615,6 +1625,15 @@ struct SetRowView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(10)
+        .onChange(of: editingFocus) { newValue in
+            guard let newValue = newValue else { return }
+            switch newValue {
+            case .weight(let id):
+                if id == setIdString { focusedField = .weight }
+            case .reps(let id):
+                if id == setIdString { focusedField = .reps }
+            }
+        }
         .onAppear {
             updateWeightDisplay()
             repsString = set.reps > 0 ? String(set.reps) : ""
