@@ -542,7 +542,7 @@ struct WorkoutSessionView: View {
                                 }
                                 
                 LazyVStack(spacing: 8) {
-                    ForEach(getSetsForCurrentExercise()) { set in
+                    ForEach(getSetsForCurrentExercise(), id: \.objectID) { set in
                         SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
                             // Auto-start rest timer when any set is completed
                             startRestTimer()
@@ -1514,6 +1514,11 @@ struct SetRowView: View {
                         .onTapGesture {
                             focusedField = .weight
                             editingFocus = .weight(setIdString)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                                withAnimation(.none) {
+                                    focusedField = .weight
+                                }
+                            }
                         }
                         .onChange(of: weightString) { newValue in
                             // Validate input without immediately updating the binding
@@ -1574,6 +1579,11 @@ struct SetRowView: View {
                         .onTapGesture {
                             focusedField = .reps
                             editingFocus = .reps(setIdString)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                                withAnimation(.none) {
+                                    focusedField = .reps
+                                }
+                            }
                         }
                         .onChange(of: repsString) { newValue in
                             // Validate input without immediately updating the binding
@@ -1630,13 +1640,13 @@ struct SetRowView: View {
             switch newValue {
             case .weight(let id):
                 if id == setIdString {
-                    DispatchQueue.main.async {
+                    withAnimation(.none) {
                         focusedField = .weight
                     }
                 }
             case .reps(let id):
                 if id == setIdString {
-                    DispatchQueue.main.async {
+                    withAnimation(.none) {
                         focusedField = .reps
                     }
                 }
