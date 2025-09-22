@@ -2,6 +2,10 @@ import SwiftUI
 import CoreData
 import UserNotifications
 
+extension Notification.Name {
+    static let resumeWorkout = Notification.Name("resumeWorkout")
+}
+
 class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         return [.banner, .sound]
@@ -10,8 +14,11 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         let info = response.notification.request.content.userInfo
         if let type = info["type"] as? String, type == "rest_timer_complete" {
-            // In the future, we could route to the active workout using sessionID
-            // For now, no-op; the app will restore timers on foreground
+            if let sessionID = info["sessionID"] as? String {
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .resumeWorkout, object: sessionID)
+                }
+            }
         }
     }
 }

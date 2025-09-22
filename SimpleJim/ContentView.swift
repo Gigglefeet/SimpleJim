@@ -5,6 +5,9 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @State private var selectedTab = 0
     @State private var hasPerformedStartupCleanup = false
+    @State private var resumeSessionObjectIDURL: URL? = nil
+    @State private var showResumeSheet = false
+    @State private var resumeObserver: NSObjectProtocol? = nil
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -41,6 +44,35 @@ struct ContentView: View {
             if !hasPerformedStartupCleanup {
                 cleanupOrphanedSessions()
                 hasPerformedStartupCleanup = true
+            }
+            // Install observer once to avoid duplicate sheet presentations
+            if resumeObserver == nil {
+                resumeObserver = NotificationCenter.default.addObserver(forName: .resumeWorkout, object: nil, queue: .main) { notif in
+                    guard let sessionID = notif.object as? String, let url = URL(string: sessionID) else { return }
+                    // Avoid duplicate presentations if sheet is already visible or same URL is pending
+                    if showResumeSheet, resumeSessionObjectIDURL == url { return }
+                    resumeSessionObjectIDURL = url
+                    showResumeSheet = true
+                }
+            }
+        }
+        .onDisappear {
+            if let token = resumeObserver {
+                NotificationCenter.default.removeObserver(token)
+                resumeObserver = nil
+            }
+        }
+        .sheet(isPresented: $showResumeSheet) {
+            if let url = resumeSessionObjectIDURL,
+               let psc = viewContext.persistentStoreCoordinator,
+               let objectID = psc.managedObjectID(forURIRepresentation: url),
+               let resolved = try? viewContext.existingObject(with: objectID),
+               let session = resolved as? TrainingSession,
+               let template = session.template {
+                WorkoutSessionView(dayTemplate: template, trainingSession: session)
+                    .environment(\.managedObjectContext, viewContext)
+            } else {
+                Text("Could not restore workout session.")
             }
         }
     }

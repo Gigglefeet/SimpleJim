@@ -1102,7 +1102,17 @@ struct WorkoutSessionView: View {
         DispatchQueue.main.async {
             guard backgroundTaskID == .invalid else { return }
             backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
-                // Background task expiration handler
+                // Background task expiration handler: persist state and end task to avoid termination
+                // Capture remaining time and persist so we can restore when app returns
+                if restTimerActive {
+                    // Update remaining based on endTime if available
+                    if let endTime = restTimerEndTime {
+                        let remaining = max(0, endTime.timeIntervalSince(Date()))
+                        restTimeRemaining = remaining
+                    }
+                    saveRestTimerState()
+                }
+                endBackgroundTask()
             }
             #if DEBUG
             print("🌙 Started background task for rest timer")
@@ -1399,18 +1409,20 @@ struct WorkoutSessionView: View {
             
         case .inactive, .background:
             // App went to background - keep rest timer running, only stop workout timer
-            if timersAreRunning {
-                // Stop the workout timer and set to nil so it can be restarted later
-                workoutTimerCancellable?.cancel()
-                workoutTimerCancellable = nil
-                
-                // Keep rest timer running but reduce frequency for battery savings
-                if restTimerActive && restTimerCancellable != nil {
-                    setRestTimerFrequency(1.0)
+            DispatchQueue.main.async {
+                if timersAreRunning {
+                    // Stop the workout timer and set to nil so it can be restarted later
+                    workoutTimerCancellable?.cancel()
+                    workoutTimerCancellable = nil
+                    
+                    // Keep rest timer running but reduce frequency for battery savings
+                    if restTimerActive && restTimerCancellable != nil {
+                        setRestTimerFrequency(1.0)
+                    }
+                    #if DEBUG
+                    print("📱 App went to background - stopped workout timer, reduced rest timer frequency")
+                    #endif
                 }
-                #if DEBUG
-                print("📱 App went to background - stopped workout timer, reduced rest timer frequency")
-                #endif
             }
             
         @unknown default:
