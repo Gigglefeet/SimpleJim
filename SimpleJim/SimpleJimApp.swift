@@ -4,8 +4,10 @@ import UserNotifications
 
 extension Notification.Name {
     static let resumeWorkout = Notification.Name("resumeWorkout")
+    static let workoutDidFinish = Notification.Name("workoutDidFinish")
 }
 
+@MainActor
 class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         return [.banner, .sound]
@@ -15,9 +17,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         let info = response.notification.request.content.userInfo
         if let type = info["type"] as? String, type == "rest_timer_complete" {
             if let sessionID = info["sessionID"] as? String {
-                await MainActor.run {
-                    NotificationCenter.default.post(name: .resumeWorkout, object: sessionID)
-                }
+                NotificationCenter.default.post(name: .resumeWorkout, object: sessionID)
             }
         }
     }

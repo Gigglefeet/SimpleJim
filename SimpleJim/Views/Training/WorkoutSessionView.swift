@@ -831,8 +831,10 @@ struct WorkoutSessionView: View {
                 
                 // Warning haptic at 10 seconds remaining (only once)
                 if newDisplaySecond == 10 {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                    impactFeedback.impactOccurred()
+                    if scenePhase == .active {
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.impactOccurred()
+                    }
                     #if DEBUG
                     print("⚠️ Rest timer: 10 seconds remaining")
                     #endif
@@ -840,8 +842,10 @@ struct WorkoutSessionView: View {
                 
                 // Final countdown haptic at 3, 2, 1 (only once per second)
                 if newDisplaySecond <= 3 && newDisplaySecond > 0 {
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
+                    if scenePhase == .active {
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                        impactFeedback.impactOccurred()
+                    }
                     #if DEBUG
                     print("⏰ Rest timer countdown: \(newDisplaySecond)")
                     #endif
@@ -928,17 +932,23 @@ struct WorkoutSessionView: View {
         endBackgroundTask()
         
         // Strong completion haptic feedback (3 pulses)
-        let notificationFeedback = UINotificationFeedbackGenerator()
-        notificationFeedback.notificationOccurred(.success)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-            impactFeedback.impactOccurred()
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-            impactFeedback.impactOccurred()
+        if scenePhase == .active {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                if scenePhase == .active {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                    impactFeedback.impactOccurred()
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                if scenePhase == .active {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+                    impactFeedback.impactOccurred()
+                }
+            }
         }
         
         #if DEBUG
@@ -971,6 +981,16 @@ struct WorkoutSessionView: View {
     
     private func saveRestTimerState() {
         guard let startTime = restTimerStartTime else { return }
+        // Ensure we have a permanent object ID so we can reliably restore later
+        if trainingSession.objectID.isTemporaryID {
+            do {
+                try viewContext.obtainPermanentIDs(for: [trainingSession])
+            } catch {
+                #if DEBUG
+                print("❌ Failed to obtain permanent ID for session: \(error)")
+                #endif
+            }
+        }
         let sessionID = trainingSession.objectID.uriRepresentation().absoluteString
         
         UserDefaults.standard.set(true, forKey: restTimerActiveKey)
@@ -1064,6 +1084,10 @@ struct WorkoutSessionView: View {
         content.categoryIdentifier = "REST_TIMER"
         
         // Add user info to help with navigation when notification is tapped
+        // Ensure permanent ID for reliability
+        if trainingSession.objectID.isTemporaryID {
+            do { try viewContext.obtainPermanentIDs(for: [trainingSession]) } catch { }
+        }
         let sessionID = trainingSession.objectID.uriRepresentation().absoluteString
         content.userInfo = [
             "type": "rest_timer_complete",
@@ -1102,17 +1126,17 @@ struct WorkoutSessionView: View {
         DispatchQueue.main.async {
             guard backgroundTaskID == .invalid else { return }
             backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
-                // Background task expiration handler: persist state and end task to avoid termination
-                // Capture remaining time and persist so we can restore when app returns
-                if restTimerActive {
-                    // Update remaining based on endTime if available
-                    if let endTime = restTimerEndTime {
-                        let remaining = max(0, endTime.timeIntervalSince(Date()))
-                        restTimeRemaining = remaining
+                // Background task expiration handler: must hop to main for any UI/state updates
+                DispatchQueue.main.async {
+                    if restTimerActive {
+                        if let endTime = restTimerEndTime {
+                            let remaining = max(0, endTime.timeIntervalSince(Date()))
+                            restTimeRemaining = remaining
+                        }
+                        saveRestTimerState()
                     }
-                    saveRestTimerState()
+                    endBackgroundTask()
                 }
-                endBackgroundTask()
             }
             #if DEBUG
             print("🌙 Started background task for rest timer")
@@ -1334,7 +1358,8 @@ struct WorkoutSessionView: View {
         
         do {
             try viewContext.save()
-            dismiss()
+            // Notify root to unwind back to tabs instead of dismissing a modal
+            NotificationCenter.default.post(name: .workoutDidFinish, object: nil)
         } catch {
             #if DEBUG
             print("Error finishing workout: \(error)")
