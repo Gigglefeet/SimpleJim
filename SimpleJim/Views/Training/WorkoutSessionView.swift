@@ -60,7 +60,7 @@ struct WorkoutSessionView: View {
     // Background timer persistence
     @State private var restTimerStartTime: Date?
     @State private var restTimerEndTime: Date?
-    @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid // deprecated usage removed below
     
     // UserDefaults keys for timer persistence
     private let restTimerActiveKey = "restTimerActive"
@@ -805,8 +805,7 @@ struct WorkoutSessionView: View {
         // Schedule local notification for timer completion
         scheduleRestTimerNotification()
         
-        // Start background task to keep timer running
-        startBackgroundTask()
+        // No background task; rely on local notification + restore on resume
         
         #if DEBUG
         print("⏰ Started rest timer: \(Int(defaultRestTime))s")
@@ -870,7 +869,7 @@ struct WorkoutSessionView: View {
         
         clearRestTimerState()
         cancelRestTimerNotification()
-        endBackgroundTask()
+        // No background task to end
         
         #if DEBUG
         print("⏸️ Rest timer paused with \(Int(restTimeRemaining))s remaining")
@@ -892,7 +891,7 @@ struct WorkoutSessionView: View {
         // Update persistence and notifications
         saveRestTimerState()
         scheduleRestTimerNotification()
-        startBackgroundTask()
+        // No background task; rely on notification + restore
         
         #if DEBUG
         print("🔄 Rest timer reset to \(Int(defaultRestTime))s")
@@ -909,7 +908,7 @@ struct WorkoutSessionView: View {
         
         clearRestTimerState()
         cancelRestTimerNotification()
-        endBackgroundTask()
+        // No background task to end
         
         #if DEBUG
         print("⏭️ Rest timer skipped")
@@ -929,7 +928,7 @@ struct WorkoutSessionView: View {
         
         clearRestTimerState()
         cancelRestTimerNotification()
-        endBackgroundTask()
+        // No background task to end
         
         // Strong completion haptic feedback (3 pulses)
         if scenePhase == .active {
@@ -1045,7 +1044,7 @@ struct WorkoutSessionView: View {
             
             // Re-schedule notification if needed
             scheduleRestTimerNotification()
-            startBackgroundTask()
+            // No background task; rely on notification + restore
             
             #if DEBUG
             print("🔄 Restored rest timer: \(Int(remainingTime))s remaining")
@@ -1122,38 +1121,7 @@ struct WorkoutSessionView: View {
     
     // MARK: - Background Task Management
     
-    private func startBackgroundTask() {
-        DispatchQueue.main.async {
-            guard backgroundTaskID == .invalid else { return }
-            backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "RestTimer") {
-                // Background task expiration handler: must hop to main for any UI/state updates
-                DispatchQueue.main.async {
-                    if restTimerActive {
-                        if let endTime = restTimerEndTime {
-                            let remaining = max(0, endTime.timeIntervalSince(Date()))
-                            restTimeRemaining = remaining
-                        }
-                        saveRestTimerState()
-                    }
-                    endBackgroundTask()
-                }
-            }
-            #if DEBUG
-            print("🌙 Started background task for rest timer")
-            #endif
-        }
-    }
-    
-    private func endBackgroundTask() {
-        DispatchQueue.main.async {
-            guard backgroundTaskID != .invalid else { return }
-            UIApplication.shared.endBackgroundTask(backgroundTaskID)
-            backgroundTaskID = .invalid
-            #if DEBUG
-            print("🌅 Ended background task for rest timer")
-            #endif
-        }
-    }
+    // Background tasks removed to avoid App Store review issues; restoration handles continuity
     
     // MARK: - Dynamic Exercise Management
     
@@ -1349,7 +1317,7 @@ struct WorkoutSessionView: View {
             restTimerCancellable?.cancel()
             restTimerCancellable = nil
             clearRestTimerState()
-            endBackgroundTask()
+            // No background task to end
         }
         
         // Set end time
