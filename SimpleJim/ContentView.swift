@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 
+@MainActor
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
