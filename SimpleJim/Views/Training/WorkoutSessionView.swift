@@ -1326,6 +1326,8 @@ struct WorkoutSessionView: View {
         
         do {
             try viewContext.save()
+            // Dismiss if presented modally (e.g., from DayTemplateDetailView)
+            dismiss()
             // Notify root to unwind back to tabs instead of dismissing a modal
             NotificationCenter.default.post(name: .workoutDidFinish, object: nil)
         } catch {
