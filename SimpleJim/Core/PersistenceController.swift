@@ -83,3 +83,20 @@ struct PersistenceController {
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
 } 
+
+// MARK: - Units Helper (in-target)
+
+struct Units {
+    static func kgToDisplay(_ kilograms: Double, unit: String) -> Double {
+        if unit.lowercased() == "lbs" || unit.lowercased() == "pounds" { return kilograms * 2.2046226218 }
+        return kilograms
+    }
+    static func displayToKg(_ value: Double, unit: String) -> Double {
+        if unit.lowercased() == "lbs" || unit.lowercased() == "pounds" { return value / 2.2046226218 }
+        return value
+    }
+    static func unitSuffix(_ unit: String) -> String {
+        if unit.lowercased() == "lbs" || unit.lowercased() == "pounds" { return "lb" }
+        return "kg"
+    }
+} 

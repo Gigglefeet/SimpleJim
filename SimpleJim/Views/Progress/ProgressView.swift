@@ -4,6 +4,7 @@ import Charts
 
 struct TrainingProgressView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \TrainingSession.date, ascending: false)],
         animation: .default)
@@ -93,7 +94,7 @@ struct TrainingProgressView: View {
                 
                 StatCard(
                     title: "Total Weight",
-                    value: "\(Int(totalWeightLifted))kg",
+                    value: "\(Int(Units.kgToDisplay(totalWeightLifted, unit: weightUnit)))\(Units.unitSuffix(weightUnit))",
                     icon: "scalemass",
                     color: .blue
                 )
@@ -355,7 +356,7 @@ struct TrainingProgressView: View {
                         }
                     }
                     .chartXAxisLabel("Sleep Hours")
-                    .chartYAxisLabel("Total Weight (kg)")
+                    .chartYAxisLabel("Total Weight (\(Units.unitSuffix(weightUnit)))")
                 } else {
                     VStack {
                         Text("Charts require iOS 16+")
@@ -411,7 +412,7 @@ struct TrainingProgressView: View {
                         Spacer()
                         
                         VStack(alignment: .trailing, spacing: 4) {
-                            Text("\(Int(session.totalWeightLifted))kg")
+                            Text("\(Int(Units.kgToDisplay(session.totalWeightLifted, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
                                 .font(.headline)
                                 .foregroundColor(.orange)
                             

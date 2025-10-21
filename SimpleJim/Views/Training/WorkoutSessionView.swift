@@ -1449,6 +1449,7 @@ struct SetRowView: View {
     private var setIdString: String {
         `set`.objectID.uriRepresentation().absoluteString
     }
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     let setNumber: Int
     var onSetCompleted: (() -> Void)? = nil
@@ -1460,12 +1461,16 @@ struct SetRowView: View {
     var bodyweightDisplay: String {
         let defaultBW = UserDefaults.standard.double(forKey: "defaultBodyweight")
         let fallbackBW = defaultBW != 0 ? defaultBW : 70.0
-        let bodyweight = set.session?.userBodyweight ?? fallbackBW
-        let total = bodyweight + set.extraWeight
+        let bodyweightKg = set.session?.userBodyweight ?? fallbackBW
+        let extraKg = set.extraWeight
+        let unit = Units.unitSuffix(weightUnit)
+        let bodyweightDisp = Units.kgToDisplay(bodyweightKg, unit: weightUnit)
+        let extraDisp = Units.kgToDisplay(extraKg, unit: weightUnit)
+        let totalDisp = Units.kgToDisplay(bodyweightKg + extraKg, unit: weightUnit)
         if set.extraWeight > 0 {
-            return "\(Int(bodyweight))kg + \(Int(set.extraWeight))kg = \(Int(total))kg"
+            return "\(Int(bodyweightDisp))\(unit) + \(Int(extraDisp))\(unit) = \(Int(totalDisp))\(unit)"
         } else {
-            return "\(Int(bodyweight))kg"
+            return "\(Int(bodyweightDisp))\(unit)"
         }
     }
     
@@ -1509,7 +1514,7 @@ struct SetRowView: View {
                 
                 // Weight/Extra Weight input
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(set.isBodyweight ? "Extra (kg)" : "Weight (kg)")
+                    Text(set.isBodyweight ? "Extra (\(Units.unitSuffix(weightUnit)))" : "Weight (\(Units.unitSuffix(weightUnit)))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -1553,15 +1558,16 @@ struct SetRowView: View {
                             }
                             
                             // Update Core Data model with validated value
-                            let weightValue = min(Double(filteredValue) ?? 0, 999.9)
+                            let displayValue = min(Double(filteredValue) ?? 0, 999.9)
+                            let kgValue = Units.displayToKg(displayValue, unit: weightUnit)
                             if set.isBodyweight {
-                                set.extraWeight = weightValue
+                                set.extraWeight = kgValue
                             } else {
-                                set.weight = weightValue
+                                set.weight = kgValue
                             }
                             
                             // Only check completion if we have meaningful weight (> 0)
-                            if weightValue > 0 {
+                            if kgValue > 0 {
                                 updateCompletionStatus()
                             }
                             debouncedSave()
@@ -1672,9 +1678,11 @@ struct SetRowView: View {
     
     private func updateWeightDisplay() {
         if set.isBodyweight {
-            weightString = set.extraWeight > 0 ? String(set.extraWeight) : ""
+            let disp = Units.kgToDisplay(set.extraWeight, unit: weightUnit)
+            weightString = disp > 0 ? String(disp) : ""
         } else {
-            weightString = set.weight > 0 ? String(set.weight) : ""
+            let disp = Units.kgToDisplay(set.weight, unit: weightUnit)
+            weightString = disp > 0 ? String(disp) : ""
         }
     }
     

@@ -3,6 +3,7 @@ import CoreData
 
 struct SessionDetailView: View {
     @ObservedObject var session: TrainingSession
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     private var titleText: String {
         session.template?.name ?? "Workout"
@@ -33,7 +34,7 @@ struct SessionDetailView: View {
                 .foregroundColor(.secondary)
             
             HStack(spacing: 16) {
-                stat("Total Weight", "\(Int(session.totalWeightLifted))kg", color: .orange, icon: "scalemass")
+                stat("Total Weight", "\(Int(Units.kgToDisplay(session.totalWeightLifted, unit: weightUnit)))\(Units.unitSuffix(weightUnit))", color: .orange, icon: "scalemass")
                 stat("Duration", session.durationFormatted, color: .green, icon: "clock")
             }
             
@@ -41,7 +42,7 @@ struct SessionDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "person.fill")
                         .foregroundColor(.blue)
-                    Text("Bodyweight: \(Int(session.userBodyweight))kg")
+                    Text("Bodyweight: \(Int(Units.kgToDisplay(session.userBodyweight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -109,7 +110,7 @@ struct SessionDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(completed.sets, id: \.objectID) { set in
                     HStack(spacing: 8) {
-                        Text("\(set.isBodyweight ? "BW" : String(Int(set.effectiveWeight)))")
+                        Text(set.isBodyweight ? "BW" : "\(Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
                             .font(.caption)
                             .foregroundColor(.primary)
                             .frame(width: 44, alignment: .leading)

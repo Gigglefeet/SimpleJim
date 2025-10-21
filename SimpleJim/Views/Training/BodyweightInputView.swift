@@ -11,6 +11,7 @@ struct BodyweightInputView: View {
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
     @State private var isSaving = false
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     init(trainingSession: TrainingSession) {
         self.trainingSession = trainingSession
@@ -61,10 +62,11 @@ struct BodyweightInputView: View {
                                         return
                                     }
                                     
-                                    bodyweight = min(max(Double(filteredValue) ?? 70.0, 20.0), 500.0)
+                                    let displayVal = min(max(Double(filteredValue) ?? 70.0, 20.0), 500.0)
+                                    bodyweight = Units.displayToKg(displayVal, unit: weightUnit)
                                 }
                             
-                            Text("kg")
+                            Text(Units.unitSuffix(weightUnit))
                                 .foregroundColor(.secondary)
                         }
                     }

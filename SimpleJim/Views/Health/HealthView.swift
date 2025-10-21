@@ -18,6 +18,7 @@ struct HealthView: View {
     // Get user's goals from profile settings
     @AppStorage("sleepGoal") private var sleepGoal: Double = 8.0
     @AppStorage("proteinGoal") private var proteinGoal: Double = 150.0
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     enum ViewMode: String, CaseIterable {
         case month = "Month"
@@ -168,6 +169,8 @@ struct HealthView: View {
             }
         }
     }
+    
+    
     
     private var summaryStatsSection: some View {
         VStack(spacing: 16) {
@@ -473,6 +476,7 @@ struct WeekDayRowView: View {
     let showWorkoutOverlay: Bool
     let sleepGoal: Double
     let proteinGoal: Double
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     private var dayName: String {
         let formatter = DateFormatter()
@@ -532,7 +536,7 @@ struct WeekDayRowView: View {
                             .foregroundColor(.orange)
                             .font(.caption)
                         
-                        Text("\(Int(dayData.totalWeight))kg • \(dayData.exerciseCount) exercises")
+                        Text("\(Int(Units.kgToDisplay(dayData.totalWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit)) • \(dayData.exerciseCount) exercises")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -553,6 +557,7 @@ struct DayDetailView: View {
     let dayData: DayData
     let session: TrainingSession?
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     private var dayName: String {
         let formatter = DateFormatter()
@@ -626,7 +631,7 @@ struct DayDetailView: View {
                                     Text("Total Weight:")
                                         .foregroundColor(.secondary)
                                     Spacer()
-                                    Text("\(Int(dayData.totalWeight))kg")
+                                    Text("\(Int(Units.kgToDisplay(dayData.totalWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
                                         .bold()
                                         .foregroundColor(.orange)
                                 }
