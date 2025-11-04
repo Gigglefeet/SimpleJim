@@ -129,14 +129,10 @@ struct WorkoutSessionView: View {
         #endif
         
         if let group = currentGroup, group.isSuperset {
-            // In superset: can advance if there are more exercises in the group OR more groups
-            let hasMoreInGroup = currentExerciseInGroup < group.exercises.count - 1
-            let hasMoreGroups = currentGroupIndex < totalGroups - 1
-            let canGo = hasMoreInGroup || hasMoreGroups
+            // Superset is handled side-by-side; treat as a single unit
+            let canGo = currentGroupIndex < totalGroups - 1
             #if DEBUG
-            print("🔜 Can go to next (superset): \(canGo)")
-            print("   - More in group: \(hasMoreInGroup) (\(currentExerciseInGroup)/\(group.exercises.count))")
-            print("   - More groups: \(hasMoreGroups) (\(currentGroupIndex)/\(totalGroups))")
+            print("🔜 Can go to next (superset treated as single unit): \(canGo)")
             #endif
             return canGo
         } else {
@@ -154,13 +150,11 @@ struct WorkoutSessionView: View {
     }
     
     private var nextButtonTitle: String {
-        if let nextExercise = nextExerciseInSuperset {
-            return "Next: \(nextExercise.name ?? "Exercise")"
-        } else if currentGroupIndex < exerciseGroups.count - 1 {
-            return "Next Exercise"
-        } else {
-            return "Finish Workout"
+        if let group = currentGroup, group.isSuperset {
+            return currentGroupIndex < exerciseGroups.count - 1 ? "Next Exercise" : "Finish Workout"
         }
+        if currentGroupIndex < exerciseGroups.count - 1 { return "Next Exercise" }
+        return "Finish Workout"
     }
     
     private var workoutProgress: Double {
@@ -448,116 +442,139 @@ struct WorkoutSessionView: View {
         VStack(spacing: 20) {
             // Exercise info with superset context
             VStack(spacing: 8) {
-                                // Superset indicator
-                                if isInSuperset, let group = currentGroup {
+                                if isInSuperset, let group = currentGroup, group.exercises.count == 2 {
+                                    // Compact superset header to free vertical space
                                     HStack(spacing: 8) {
-                                        Image(systemName: "arrow.triangle.2.circlepath")
-                                            .foregroundColor(.orange)
-                                            .font(.caption)
-                                        
-                                        Text(group.displayTitle)
-                                            .font(.caption)
-                                            .bold()
-                                            .foregroundColor(.orange)
-                                        
-                                        if let label = exercise.supersetLabel {
-                                            Text(label)
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "arrow.triangle.2.circlepath")
+                                                .foregroundColor(.orange)
+                                                .font(.caption)
+                                            Text(group.displayTitle)
                                                 .font(.caption)
                                                 .bold()
-                                                .foregroundColor(.white)
-                                                .frame(width: 20, height: 20)
-                                                .background(Color.orange)
-                                                .clipShape(Circle())
+                                                .foregroundColor(.orange)
                                         }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(Color.orange.opacity(0.2))
+                                        .cornerRadius(10)
+                                        Spacer()
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange.opacity(0.2))
-                                    .cornerRadius(12)
-                                }
-                                
-                                Text(exercise.name ?? "Exercise")
-                                    .font(.title)
-                                    .bold()
-                                
-                                Text(exercise.muscleGroup ?? "")
-                                    .font(.subheadline)
-                                    .foregroundColor(.orange)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 4)
-                                    .background(Color.orange.opacity(0.2))
-                                    .cornerRadius(8)
-                                
-                                if let notes = exercise.notes, !notes.isEmpty {
-                                    Text(notes)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
-                                }
-                                
-                                // Superset flow indicator
-                                if isInSuperset, let nextExercise = nextExerciseInSuperset {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "arrow.down")
-                                            .foregroundColor(.orange)
-                                            .font(.caption)
-                                        
-                                        Text("Next: \(nextExercise.name ?? "Exercise")")
-                                            .font(.caption)
-                                            .foregroundColor(.orange)
+                                    HStack(alignment: .center, spacing: 12) {
+                                        let a = group.exercises[0]
+                                        let b = group.exercises[1]
+                                        VStack(spacing: 4) {
+                                            Text(a.name ?? "Exercise A")
+                                                .font(.headline)
+                                                .lineLimit(2)
+                                                .multilineTextAlignment(.center)
+                                            if let mg = a.muscleGroup, !mg.isEmpty {
+                                                Text(mg).font(.caption).foregroundColor(.orange)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        VStack(spacing: 4) {
+                                            Text(b.name ?? "Exercise B")
+                                                .font(.headline)
+                                                .lineLimit(2)
+                                                .multilineTextAlignment(.center)
+                                            if let mg = b.muscleGroup, !mg.isEmpty {
+                                                Text(mg).font(.caption).foregroundColor(.orange)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity)
                                     }
-                                    .padding(.top, 4)
+                                } else {
+                                    // Original single exercise header
+                                    Text(exercise.name ?? "Exercise")
+                                        .font(.title)
+                                        .bold()
+                                    
+                                    Text(exercise.muscleGroup ?? "")
+                                        .font(.subheadline)
+                                        .foregroundColor(.orange)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 4)
+                                        .background(Color.orange.opacity(0.2))
+                                        .cornerRadius(8)
+                                    
+                                    if let notes = exercise.notes, !notes.isEmpty {
+                                        Text(notes)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
+                                    }
                                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.top, 8)
             
-            // Sets
-            VStack(spacing: 12) {
-                                HStack {
-                                    Text("Sets")
-                                        .font(.headline)
-                                    
-                                    Spacer()
-                                    
-                                    // Add/Remove set buttons
-                                    HStack(spacing: 8) {
-                                        Button(action: {
-                                            removeSet()
-                                        }) {
-                                            Image(systemName: "minus.circle")
-                                                .foregroundColor(.red)
-                                                .font(.title2)
+            // Orientation hint for supersets
+            if isInSuperset {
+                let isPortrait = UIScreen.main.bounds.height >= UIScreen.main.bounds.width
+                if isPortrait {
+                    HStack(spacing: 8) {
+                        Image(systemName: "rotate.right.fill").foregroundColor(.orange)
+                        Text("Rotate to landscape to view both exercises side-by-side")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                }
+            }
+
+            // Sets / Rounds
+            if isInSuperset, let group = currentGroup, group.exercises.count == 2 {
+                supersetRoundsSection(group: group)
+            } else {
+                VStack(spacing: 12) {
+                                        HStack {
+                                            Text("Sets")
+                                                .font(.headline)
+                                            
+                                            Spacer()
+                                            
+                                            // Add/Remove set buttons
+                                            HStack(spacing: 8) {
+                                                Button(action: {
+                                                    removeSet()
+                                                }) {
+                                                    Image(systemName: "minus.circle")
+                                                        .foregroundColor(.red)
+                                                        .font(.title2)
+                                                }
+                                                .disabled(getSetsForCurrentExercise().count <= 1)
+                                                
+                                                Button(action: {
+                                                    addSet()
+                                                }) {
+                                                    Image(systemName: "plus.circle")
+                                                        .foregroundColor(.green)
+                                                        .font(.title2)
+                                                }
+                                            }
                                         }
-                                        .disabled(getSetsForCurrentExercise().count <= 1)
                                         
-                                        Button(action: {
-                                            addSet()
-                                        }) {
-                                            Image(systemName: "plus.circle")
-                                                .foregroundColor(.green)
-                                                .font(.title2)
-                                        }
+                    LazyVStack(spacing: 8) {
+                        ForEach(getSetsForCurrentExercise(), id: \.objectID) { set in
+                            SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
+                                // Auto-start rest timer when any set is completed
+                                startRestTimer()
+                                // If user completes set N, auto-advance focus to next set's weight field
+                                DispatchQueue.main.async {
+                                    if let next = getSetsForCurrentExercise().first(where: { Int($0.order) == Int(set.order) + 1 }) {
+                                        let id = next.objectID.uriRepresentation().absoluteString
+                                        focusedEditingField = .weight(id)
                                     }
-                                }
-                                
-                LazyVStack(spacing: 8) {
-                    ForEach(getSetsForCurrentExercise(), id: \.objectID) { set in
-                        SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
-                            // Auto-start rest timer when any set is completed
-                            startRestTimer()
-                            // If user completes set N, auto-advance focus to next set's weight field
-                            DispatchQueue.main.async {
-                                if let next = getSetsForCurrentExercise().first(where: { Int($0.order) == Int(set.order) + 1 }) {
-                                    let id = next.objectID.uriRepresentation().absoluteString
-                                    focusedEditingField = .weight(id)
                                 }
                             }
                         }
                     }
                 }
+                .padding()
             }
-            .padding()
             
             // Rest Timer Section (reserve constant height to avoid layout-induced focus loss)
             ZStack {
@@ -655,6 +672,142 @@ struct WorkoutSessionView: View {
             .padding()
         }
     }
+
+    // MARK: - Superset Rounds Section
+
+    @ViewBuilder
+    private func supersetRoundsSection(group: ExerciseGroup) -> some View {
+        let exercises = group.exercises
+        if exercises.count != 2 {
+            EmptyView()
+        } else {
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Rounds")
+                        .font(.headline)
+                    Spacer()
+                    HStack(spacing: 8) {
+                        Button(action: { removeSupersetRound(group: group) }) {
+                            Image(systemName: "minus.circle")
+                                .foregroundColor(.red)
+                                .font(.title2)
+                        }
+                        .disabled(supersetRoundsCount(group: group) <= 1)
+                        Button(action: { addSupersetRound(group: group) }) {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.green)
+                                .font(.title2)
+                        }
+                    }
+                }
+
+                let a = exercises[0]
+                let b = exercises[1]
+                let (aCompleted, bCompleted) = (completedExercise(for: a), completedExercise(for: b))
+                let rounds = max(aCompleted?.sets.count ?? 0, bCompleted?.sets.count ?? 0)
+
+                VStack(spacing: 8) {
+                    ForEach(0..<rounds, id: \.self) { roundIndex in
+                        HStack(spacing: 12) {
+                            if let setA = setForRound(completed: aCompleted, roundIndex: roundIndex) {
+                                SetRowView(set: setA, editingFocus: editingFocusBinding, setNumber: roundIndex + 1) {
+                                    // After completing A, focus B's weight in same round
+                                    DispatchQueue.main.async {
+                                        if let setB = setForRound(completed: bCompleted, roundIndex: roundIndex) {
+                                            let id = setB.objectID.uriRepresentation().absoluteString
+                                            focusedEditingField = .weight(id)
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+
+                            if let setB = setForRound(completed: bCompleted, roundIndex: roundIndex) {
+                                SetRowView(set: setB, editingFocus: editingFocusBinding, setNumber: roundIndex + 1) {
+                                    // After completing B, if both A and B for this round are completed -> start rest
+                                    if let setA = setForRound(completed: aCompleted, roundIndex: roundIndex),
+                                       setA.isCompleted, setB.isCompleted {
+                                        startRestTimer()
+                                        // Focus next round's A weight if exists
+                                        DispatchQueue.main.async {
+                                            if roundIndex + 1 < rounds, let nextA = setForRound(completed: aCompleted, roundIndex: roundIndex + 1) {
+                                                let id = nextA.objectID.uriRepresentation().absoluteString
+                                                focusedEditingField = .weight(id)
+                                            }
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+
+    private func completedExercise(for template: ExerciseTemplate) -> CompletedExercise? {
+        return trainingSession.sortedCompletedExercises.first(where: { $0.template == template })
+    }
+
+    private func setForRound(completed: CompletedExercise?, roundIndex: Int) -> ExerciseSet? {
+        guard let completed = completed else { return nil }
+        if roundIndex < completed.sets.count {
+            return completed.sets[roundIndex]
+        } else {
+            // Create missing set for this round
+            let exerciseSet = ExerciseSet(context: viewContext)
+            exerciseSet.order = Int16(roundIndex)
+            exerciseSet.weight = 0
+            exerciseSet.reps = 0
+            exerciseSet.isCompleted = false
+            exerciseSet.completedExercise = completed
+            completed.addToExerciseSets(exerciseSet)
+            do { try viewContext.save() } catch { }
+            return exerciseSet
+        }
+    }
+
+    private func supersetRoundsCount(group: ExerciseGroup) -> Int {
+        let exercises = group.exercises
+        guard exercises.count == 2 else { return getSetsForCurrentExercise().count }
+        let aCount = completedExercise(for: exercises[0])?.sets.count ?? 0
+        let bCount = completedExercise(for: exercises[1])?.sets.count ?? 0
+        return max(aCount, bCount)
+    }
+
+    private func addSupersetRound(group: ExerciseGroup) {
+        guard group.exercises.count == 2 else { return }
+        let a = group.exercises[0]
+        let b = group.exercises[1]
+        guard let aCompleted = completedExercise(for: a), let bCompleted = completedExercise(for: b) else { return }
+        let nextIndex = max(aCompleted.sets.count, bCompleted.sets.count)
+        func createSet(for completed: CompletedExercise, index: Int) {
+            let s = ExerciseSet(context: viewContext)
+            s.order = Int16(index)
+            s.weight = 0
+            s.reps = 0
+            s.isCompleted = false
+            s.completedExercise = completed
+            completed.addToExerciseSets(s)
+        }
+        createSet(for: aCompleted, index: nextIndex)
+        createSet(for: bCompleted, index: nextIndex)
+        do { try viewContext.save() } catch { }
+    }
+
+    private func removeSupersetRound(group: ExerciseGroup) {
+        guard group.exercises.count == 2 else { return }
+        let a = group.exercises[0]
+        let b = group.exercises[1]
+        guard let aCompleted = completedExercise(for: a), let bCompleted = completedExercise(for: b) else { return }
+        let lastIndex = min(aCompleted.sets.count, bCompleted.sets.count) - 1
+        guard lastIndex >= 1 else { return }
+        if let lastA = aCompleted.sets.last { aCompleted.removeFromExerciseSets(lastA); viewContext.delete(lastA) }
+        if let lastB = bCompleted.sets.last { bCompleted.removeFromExerciseSets(lastB); viewContext.delete(lastB) }
+        do { try viewContext.save() } catch { }
+    }
     
     // MARK: - Navigation Methods
     
@@ -677,14 +830,9 @@ struct WorkoutSessionView: View {
     private func goToNextExercise() {
         withAnimation {
             if let group = currentGroup, group.isSuperset {
-                // In superset: advance within group or move to next group
-                if currentExerciseInGroup < group.exercises.count - 1 {
-                    currentExerciseInGroup += 1
-                } else {
-                    // Move to next group
-                    currentGroupIndex += 1
-                    currentExerciseInGroup = 0
-                }
+                // Superset handled as one step: jump to next group
+                currentGroupIndex += 1
+                currentExerciseInGroup = 0
             } else {
                 // Standalone exercise: move to next group
                 currentGroupIndex += 1
