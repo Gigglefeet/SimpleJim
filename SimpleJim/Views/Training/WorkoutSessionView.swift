@@ -56,6 +56,7 @@ struct WorkoutSessionView: View {
             set: { focusedEditingField = $0 }
         )
     }
+    @State private var currentSupersetRound: Int = 0
     
     // Background timer persistence
     @State private var restTimerStartTime: Date?
@@ -463,26 +464,44 @@ struct WorkoutSessionView: View {
                                     HStack(alignment: .center, spacing: 12) {
                                         let a = group.exercises[0]
                                         let b = group.exercises[1]
-                                        VStack(spacing: 4) {
-                                            Text(a.name ?? "Exercise A")
-                                                .font(.headline)
-                                                .lineLimit(2)
-                                                .multilineTextAlignment(.center)
-                                            if let mg = a.muscleGroup, !mg.isEmpty {
-                                                Text(mg).font(.caption).foregroundColor(.orange)
+                                        HStack(spacing: 6) {
+                                            Text("A")
+                                                .font(.caption).bold()
+                                                .foregroundColor(.white)
+                                                .frame(width: 20, height: 20)
+                                                .background(Color.orange)
+                                                .clipShape(Circle())
+                                            VStack(spacing: 2) {
+                                                Text(a.name ?? "Exercise A")
+                                                    .font(.headline)
+                                                    .lineLimit(2)
+                                                    .multilineTextAlignment(.leading)
+                                                if let mg = a.muscleGroup, !mg.isEmpty {
+                                                    Text(mg).font(.caption).foregroundColor(.orange)
+                                                }
                                             }
+                                            Spacer(minLength: 0)
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        VStack(spacing: 4) {
-                                            Text(b.name ?? "Exercise B")
-                                                .font(.headline)
-                                                .lineLimit(2)
-                                                .multilineTextAlignment(.center)
-                                            if let mg = b.muscleGroup, !mg.isEmpty {
-                                                Text(mg).font(.caption).foregroundColor(.orange)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        HStack(spacing: 6) {
+                                            Text("B")
+                                                .font(.caption).bold()
+                                                .foregroundColor(.white)
+                                                .frame(width: 20, height: 20)
+                                                .background(Color.blue)
+                                                .clipShape(Circle())
+                                            VStack(spacing: 2) {
+                                                Text(b.name ?? "Exercise B")
+                                                    .font(.headline)
+                                                    .lineLimit(2)
+                                                    .multilineTextAlignment(.leading)
+                                                if let mg = b.muscleGroup, !mg.isEmpty {
+                                                    Text(mg).font(.caption).foregroundColor(.blue)
+                                                }
                                             }
+                                            Spacer(minLength: 0)
                                         }
-                                        .frame(maxWidth: .infinity)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 } else {
                                     // Original single exercise header
@@ -510,21 +529,6 @@ struct WorkoutSessionView: View {
             .padding(.horizontal)
             .padding(.top, 8)
             
-            // Orientation hint for supersets
-            if isInSuperset {
-                let isPortrait = UIScreen.main.bounds.height >= UIScreen.main.bounds.width
-                if isPortrait {
-                    HStack(spacing: 8) {
-                        Image(systemName: "rotate.right.fill").foregroundColor(.orange)
-                        Text("Rotate to landscape to view both exercises side-by-side")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                }
-            }
-
             // Sets / Rounds
             if isInSuperset, let group = currentGroup, group.exercises.count == 2 {
                 supersetRoundsSection(group: group)
@@ -682,64 +686,81 @@ struct WorkoutSessionView: View {
             EmptyView()
         } else {
             VStack(spacing: 12) {
-                HStack {
-                    Text("Rounds")
-                        .font(.headline)
-                    Spacer()
-                    HStack(spacing: 8) {
-                        Button(action: { removeSupersetRound(group: group) }) {
-                            Image(systemName: "minus.circle")
-                                .foregroundColor(.red)
-                                .font(.title2)
-                        }
-                        .disabled(supersetRoundsCount(group: group) <= 1)
-                        Button(action: { addSupersetRound(group: group) }) {
-                            Image(systemName: "plus.circle")
-                                .foregroundColor(.green)
-                                .font(.title2)
-                        }
-                    }
-                }
-
+                // Round selector chips + add/remove
                 let a = exercises[0]
                 let b = exercises[1]
                 let (aCompleted, bCompleted) = (completedExercise(for: a), completedExercise(for: b))
                 let rounds = max(aCompleted?.sets.count ?? 0, bCompleted?.sets.count ?? 0)
+                let clampedRound = min(max(0, currentSupersetRound), max(0, rounds - 1))
 
-                VStack(spacing: 8) {
-                    ForEach(0..<rounds, id: \.self) { roundIndex in
-                        HStack(spacing: 12) {
-                            if let setA = setForRound(completed: aCompleted, roundIndex: roundIndex) {
-                                SetRowView(set: setA, editingFocus: editingFocusBinding, setNumber: roundIndex + 1) {
-                                    // After completing A, focus B's weight in same round
-                                    DispatchQueue.main.async {
-                                        if let setB = setForRound(completed: bCompleted, roundIndex: roundIndex) {
-                                            let id = setB.objectID.uriRepresentation().absoluteString
-                                            focusedEditingField = .weight(id)
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-
-                            if let setB = setForRound(completed: bCompleted, roundIndex: roundIndex) {
-                                SetRowView(set: setB, editingFocus: editingFocusBinding, setNumber: roundIndex + 1) {
-                                    // After completing B, if both A and B for this round are completed -> start rest
-                                    if let setA = setForRound(completed: aCompleted, roundIndex: roundIndex),
-                                       setA.isCompleted, setB.isCompleted {
-                                        startRestTimer()
-                                        // Focus next round's A weight if exists
-                                        DispatchQueue.main.async {
-                                            if roundIndex + 1 < rounds, let nextA = setForRound(completed: aCompleted, roundIndex: roundIndex + 1) {
-                                                let id = nextA.objectID.uriRepresentation().absoluteString
-                                                focusedEditingField = .weight(id)
-                                            }
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Text("Rounds").font(.headline)
+                        ForEach(0..<max(rounds, 1), id: \.self) { idx in
+                            Button(action: { currentSupersetRound = idx }) {
+                                Text("\(idx + 1)")
+                                    .font(.caption)
+                                    .bold()
+                                    .foregroundColor(clampedRound == idx ? .white : .primary)
+                                    .frame(width: 28, height: 28)
+                                    .background(clampedRound == idx ? Color.orange : Color(.systemGray5))
+                                    .clipShape(Circle())
                             }
                         }
+                        Button(action: {
+                            removeSupersetRound(group: group)
+                            let newCount = supersetRoundsCount(group: group)
+                            currentSupersetRound = min(currentSupersetRound, max(0, newCount - 1))
+                        }) {
+                            Image(systemName: "minus.circle")
+                                .foregroundColor(.red)
+                                .font(.title3)
+                        }
+                        .disabled(supersetRoundsCount(group: group) <= 1)
+                        Button(action: {
+                            addSupersetRound(group: group)
+                            let newCount = supersetRoundsCount(group: group)
+                            currentSupersetRound = max(0, newCount - 1)
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.green)
+                                .font(.title3)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+
+                // Show only the current round, stacked A then B for portrait-friendly layout
+                VStack(spacing: 8) {
+                    if let setA = setForRound(completed: aCompleted, roundIndex: clampedRound) {
+                        SetRowView(set: setA, editingFocus: editingFocusBinding, supersetBadge: "A", badgeColor: .orange, setNumber: clampedRound + 1) {
+                            // After completing A, focus B's weight in same round
+                            DispatchQueue.main.async {
+                                if let setB = setForRound(completed: bCompleted, roundIndex: clampedRound) {
+                                    let id = setB.objectID.uriRepresentation().absoluteString
+                                    focusedEditingField = .weight(id)
+                                }
+                            }
+                        }
+                        .id(setA.objectID)
+                    }
+
+                    if let setB = setForRound(completed: bCompleted, roundIndex: clampedRound) {
+                        SetRowView(set: setB, editingFocus: editingFocusBinding, supersetBadge: "B", badgeColor: .blue, setNumber: clampedRound + 1) {
+                            // After completing B, if both A and B for this round are completed -> start rest
+                            if let setA = setForRound(completed: aCompleted, roundIndex: clampedRound),
+                               setA.isCompleted, setB.isCompleted {
+                                startRestTimer()
+                                // Focus next round's A weight if exists
+                                DispatchQueue.main.async {
+                                    if clampedRound + 1 < rounds, let nextA = setForRound(completed: aCompleted, roundIndex: clampedRound + 1) {
+                                        let id = nextA.objectID.uriRepresentation().absoluteString
+                                        focusedEditingField = .weight(id)
+                                    }
+                                }
+                            }
+                        }
+                        .id(setB.objectID)
                     }
                 }
             }
@@ -1597,6 +1618,8 @@ struct SetRowView: View {
     private var setIdString: String {
         `set`.objectID.uriRepresentation().absoluteString
     }
+    var supersetBadge: String? = nil
+    var badgeColor: Color = .orange
     @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     let setNumber: Int
@@ -1632,6 +1655,16 @@ struct SetRowView: View {
                     .foregroundColor(setIsCompleted ? .white : .primary)
                     .background(setIsCompleted ? Color.green : Color.gray.opacity(0.3))
                     .clipShape(Circle())
+                
+                // Optional Superset badge (A/B)
+                if let badge = supersetBadge {
+                    Text(badge)
+                        .font(.caption).bold()
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                        .background(badgeColor)
+                        .clipShape(Circle())
+                }
                 
                 // Bodyweight toggle
                 VStack(alignment: .leading, spacing: 2) {
