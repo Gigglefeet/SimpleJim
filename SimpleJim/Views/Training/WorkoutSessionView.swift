@@ -219,8 +219,6 @@ struct WorkoutSessionView: View {
         )
     }
     @State private var currentSupersetRound: Int = 0
-    @State private var dropTargetSet: ExerciseSet? = nil
-    @State private var showingDropComposer: Bool = false
     
     // Background timer persistence
     @State private var restTimerStartTime: Date?
@@ -431,14 +429,6 @@ struct WorkoutSessionView: View {
         .onDisappear {
             // Timer management is now handled by scene phase changes
             // No need to stop timers here as they should persist through view changes
-        }
-        .sheet(isPresented: $showingDropComposer, onDismiss: { dropTargetSet = nil }) {
-            if let target = dropTargetSet {
-                DropSetComposerView(targetSet: target, onApply: { steps in
-                    applyDropSet(targetSet: target, steps: steps)
-                })
-                .environment(\.managedObjectContext, viewContext)
-            }
         }
     }
     
@@ -747,9 +737,8 @@ struct WorkoutSessionView: View {
                                     Spacer()
                                 }
                             }
-                            SetRowView(set: set, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onDropTapped: {
-                                dropTargetSet = set
-                                showingDropComposer = true
+                            SetRowView(set: set, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onApplyDrop: { steps in
+                                applyDropSet(targetSet: set, steps: steps)
                             }, setNumber: Int(set.order) + 1) {
                                 // Auto-start rest timer when any set is completed
                                 startRestTimer()
@@ -1873,7 +1862,11 @@ struct SetRowView: View {
     var supersetBadge: String? = nil
     var badgeColor: Color = .orange
     var showDropButton: Bool = false
-    var onDropTapped: (() -> Void)? = nil
+    var onApplyDrop: (([DropStep]) -> Void)? = nil
+    @State private var isDropMode: Bool = false
+    @State private var dropStepCount: Int = 1
+    @State private var dropWeights: [String] = ["", "", ""]
+    @State private var dropReps: [String] = ["", "", ""]
     @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     let setNumber: Int
@@ -1923,10 +1916,10 @@ struct SetRowView: View {
                 // Optional Drop Set button (standalone only)
                 if showDropButton {
                     Spacer(minLength: 6)
-                    Button(action: { onDropTapped?() }) {
+                    Button(action: { isDropMode.toggle() }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.down.to.line.compact")
-                            Text("Drop")
+                            Text(isDropMode ? "Cancel" : "Drop")
                         }
                         .font(.caption2)
                         .foregroundColor(.orange)
@@ -2100,6 +2093,90 @@ struct SetRowView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(10)
+        // Inline Drop Set UI
+        .overlay(
+            VStack(spacing: 8) {
+                if isDropMode {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Drop set").font(.caption).bold().foregroundColor(.orange)
+                            Spacer()
+                            Stepper(value: $dropStepCount, in: 1...3) {
+                                Text("Steps: \(dropStepCount)").font(.caption)
+                            }.labelsHidden()
+                        }
+                        ForEach(0..<dropStepCount, id: \.self) { idx in
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading) {
+                                    Text("Weight (\(Units.unitSuffix(weightUnit)))").font(.caption).foregroundColor(.secondary)
+                                    TextField("0", text: Binding(
+                                        get: { dropWeights[idx] },
+                                        set: { newValue in
+                                            let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                                            dropWeights[idx] = filtered
+                                        }
+                                    ))
+                                    .keyboardType(.decimalPad)
+                                    .frame(width: 90)
+                                }
+                                VStack(alignment: .leading) {
+                                    Text("Reps").font(.caption).foregroundColor(.secondary)
+                                    TextField("0", text: Binding(
+                                        get: { dropReps[idx] },
+                                        set: { newValue in
+                                            let filtered = newValue.filter { $0.isNumber }
+                                            dropReps[idx] = filtered
+                                        }
+                                    ))
+                                    .keyboardType(.numberPad)
+                                    .frame(width: 70)
+                                }
+                                HStack(spacing: 6) {
+                                    Button("-10%") { prefillDropStep(index: idx, percentDrop: 0.10) }
+                                    Button("-15%") { prefillDropStep(index: idx, percentDrop: 0.15) }
+                                    Button("-20%") { prefillDropStep(index: idx, percentDrop: 0.20) }
+                                }
+                                .font(.caption2).bold()
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 6)
+                            }
+                        }
+                        HStack {
+                            Button("Apply") {
+                                var steps: [DropStep] = []
+                                for i in 0..<dropStepCount {
+                                    guard let weightDisplay = Double(dropWeights[i]), weightDisplay > 0,
+                                          let repsValue = Int(dropReps[i]), repsValue > 0 else { continue }
+                                    let kg = Units.displayToKg(weightDisplay, unit: weightUnit)
+                                    steps.append(DropStep(weightKg: kg, reps: repsValue))
+                                }
+                                if !steps.isEmpty { onApplyDrop?(steps) }
+                                isDropMode = false
+                                dropWeights = ["","",""]; dropReps = ["","",""]; dropStepCount = 1
+                            }
+                            .font(.caption).bold()
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Color.orange).cornerRadius(8)
+                            
+                            Button("Cancel") {
+                                isDropMode = false
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Color(.systemGray6)).cornerRadius(8)
+                            
+                            Spacer()
+                        }
+                    }
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    .padding(.top, 4)
+                }
+            }
+            , alignment: .bottom
+        )
         .onChange(of: editingFocus) { newValue in
             guard let newValue = newValue else { return }
             switch newValue {
@@ -2126,6 +2203,28 @@ struct SetRowView: View {
         } message: {
             Text(errorMessage)
         }
+    }
+    
+    // Helper for quick fill buttons
+    private func prefillDropStep(index: Int, percentDrop: Double) {
+        func displayString(_ value: Double) -> String {
+            let rounded = (value * 10).rounded() / 10
+            return String(rounded)
+        }
+        var baseDisplay: Double? = nil
+        if index > 0, let prev = Double(dropWeights[index - 1]), prev > 0 {
+            baseDisplay = prev
+        } else if let first = Double(dropWeights[0]), first > 0 {
+            baseDisplay = first
+        } else {
+            let baseKg = set.isBodyweight ? set.extraWeight : set.weight
+            if baseKg > 0 {
+                baseDisplay = Units.kgToDisplay(baseKg, unit: weightUnit)
+            }
+        }
+        guard let base = baseDisplay, base > 0 else { return }
+        let dropped = max(0, base * (1.0 - percentDrop))
+        dropWeights[index] = displayString(dropped)
     }
     
     private func updateWeightDisplay() {
