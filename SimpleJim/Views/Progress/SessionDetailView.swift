@@ -108,12 +108,19 @@ struct SessionDetailView: View {
             
             // Compact list of sets
             VStack(alignment: .leading, spacing: 6) {
-                ForEach(completed.sets, id: \.objectID) { set in
+                let sets = completed.sets
+                ForEach(Array(sets.enumerated()), id: \.element.objectID) { idx, set in
+                    if set.restSeconds == 0 && (idx == 0 || sets[idx - 1].restSeconds > 0) {
+                        Text("Drop set")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                            .padding(.vertical, 2)
+                    }
                     HStack(spacing: 8) {
                         Text(set.isBodyweight ? "BW" : "\(Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
                             .font(.caption)
                             .foregroundColor(.primary)
-                            .frame(width: 44, alignment: .leading)
+                            .frame(width: 60, alignment: .leading)
                         Text("×")
                             .foregroundColor(.secondary)
                         Text("\(set.reps)")

@@ -3,6 +3,168 @@ import CoreData
 import Combine
 import UserNotifications
 
+// MARK: - Drop Set Model
+struct DropStep: Identifiable, Hashable {
+    let id = UUID()
+    let weightKg: Double
+    let reps: Int
+}
+
+// MARK: - Drop Set Composer (top-level)
+struct DropSetComposerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var viewContext
+    
+    let targetSet: ExerciseSet
+    let onApply: ([DropStep]) -> Void
+    
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"
+    
+    @State private var stepCount: Int = 1
+    @State private var weights: [String] = ["", "", ""]
+    @State private var reps: [String] = ["", "", ""]
+    @State private var showingError = false
+    @State private var errorMessage = ""
+    
+    private var unitSuffix: String { Units.unitSuffix(weightUnit) }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Drop Set").font(.headline)) {
+                    Stepper(value: $stepCount, in: 1...3) {
+                        Text("Steps: \(stepCount)")
+                    }
+                }
+                
+                ForEach(0..<stepCount, id: \.self) { idx in
+                    Section(header: Text("Step \(idx + 1)")) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Weight (\(unitSuffix))").font(.caption).foregroundColor(.secondary)
+                                TextField("0", text: Binding(
+                                    get: { weights[idx] },
+                                    set: { newValue in
+                                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                                        weights[idx] = filtered
+                                    }
+                                ))
+                                .keyboardType(.decimalPad)
+                            }
+                            Spacer()
+                            VStack(alignment: .leading) {
+                                Text("Reps").font(.caption).foregroundColor(.secondary)
+                                TextField("0", text: Binding(
+                                    get: { reps[idx] },
+                                    set: { newValue in
+                                        let filtered = newValue.filter { $0.isNumber }
+                                        reps[idx] = filtered
+                                    }
+                                ))
+                                .keyboardType(.numberPad)
+                            }
+                            .frame(width: 80)
+                        }
+                        
+                        // Quick fill buttons (drop from previous step or base)
+                        HStack(spacing: 8) {
+                            Button(action: { prefillStep(index: idx, percentDrop: 0.10) }) {
+                                Text("-10%")
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                            }
+                            Button(action: { prefillStep(index: idx, percentDrop: 0.15) }) {
+                                Text("-15%")
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                            }
+                            Button(action: { prefillStep(index: idx, percentDrop: 0.20) }) {
+                                Text("-20%")
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Create Drop Set")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Apply") {
+                        apply()
+                    }
+                }
+            }
+            .alert("Invalid Input", isPresented: $showingError) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+        .onAppear {
+            // Prefill first step weight from target if available
+            let baseKg = targetSet.isBodyweight ? targetSet.extraWeight : targetSet.weight
+            if baseKg > 0 {
+                weights[0] = String(Units.kgToDisplay(baseKg, unit: weightUnit))
+            }
+        }
+    }
+    
+    private func apply() {
+        var steps: [DropStep] = []
+        for i in 0..<stepCount {
+            guard let weightDisplay = Double(weights[i]), weightDisplay > 0 else {
+                errorMessage = "Please enter a valid weight for step \(i + 1)."
+                showingError = true
+                return
+            }
+            guard let repsValue = Int(reps[i]), repsValue > 0 else {
+                errorMessage = "Please enter valid reps for step \(i + 1)."
+                showingError = true
+                return
+            }
+            let kg = Units.displayToKg(weightDisplay, unit: weightUnit)
+            steps.append(DropStep(weightKg: kg, reps: repsValue))
+        }
+        onApply(steps)
+        dismiss()
+    }
+    
+    private func prefillStep(index: Int, percentDrop: Double) {
+        // Determine base weight in display units
+        func displayString(_ value: Double) -> String {
+            let rounded = (value * 10).rounded() / 10
+            return String(rounded)
+        }
+        // Prefer previous step's weight
+        var baseDisplay: Double? = nil
+        if index > 0, let prev = Double(weights[index - 1]), prev > 0 {
+            baseDisplay = prev
+        } else if let first = Double(weights[0]), first > 0 {
+            baseDisplay = first
+        } else {
+            let baseKg = targetSet.isBodyweight ? targetSet.extraWeight : targetSet.weight
+            if baseKg > 0 {
+                baseDisplay = Units.kgToDisplay(baseKg, unit: weightUnit)
+            }
+        }
+        guard let base = baseDisplay, base > 0 else { return }
+        let dropped = max(0, base * (1.0 - percentDrop))
+        weights[index] = displayString(dropped)
+    }
+}
+
 // MARK: - Shared Focus Key For Set Inputs
 enum EditingFocus: Hashable {
     case weight(String) // NSManagedObjectID URI
@@ -57,6 +219,8 @@ struct WorkoutSessionView: View {
         )
     }
     @State private var currentSupersetRound: Int = 0
+    @State private var dropTargetSet: ExerciseSet? = nil
+    @State private var showingDropComposer: Bool = false
     
     // Background timer persistence
     @State private var restTimerStartTime: Date?
@@ -267,6 +431,14 @@ struct WorkoutSessionView: View {
         .onDisappear {
             // Timer management is now handled by scene phase changes
             // No need to stop timers here as they should persist through view changes
+        }
+        .sheet(isPresented: $showingDropComposer, onDismiss: { dropTargetSet = nil }) {
+            if let target = dropTargetSet {
+                DropSetComposerView(targetSet: target, onApply: { steps in
+                    applyDropSet(targetSet: target, steps: steps)
+                })
+                .environment(\.managedObjectContext, viewContext)
+            }
         }
     }
     
@@ -562,8 +734,23 @@ struct WorkoutSessionView: View {
                                         }
                                         
                     LazyVStack(spacing: 8) {
-                        ForEach(getSetsForCurrentExercise(), id: \.objectID) { set in
-                            SetRowView(set: set, editingFocus: editingFocusBinding, setNumber: Int(set.order) + 1) {
+                        ForEach(Array(getSetsForCurrentExercise().enumerated()), id: \.element.objectID) { idx, set in
+                            if set.restSeconds == 0 && (idx == 0 || getSetsForCurrentExercise()[idx - 1].restSeconds > 0) {
+                                HStack(spacing: 6) {
+                                    Text("Drop set")
+                                        .font(.caption2)
+                                        .foregroundColor(.orange)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.orange.opacity(0.15))
+                                        .cornerRadius(8)
+                                    Spacer()
+                                }
+                            }
+                            SetRowView(set: set, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onDropTapped: {
+                                dropTargetSet = set
+                                showingDropComposer = true
+                            }, setNumber: Int(set.order) + 1) {
                                 // Auto-start rest timer when any set is completed
                                 startRestTimer()
                                 // If user completes set N, auto-advance focus to next set's weight field
@@ -828,6 +1015,71 @@ struct WorkoutSessionView: View {
         if let lastA = aCompleted.sets.last { aCompleted.removeFromExerciseSets(lastA); viewContext.delete(lastA) }
         if let lastB = bCompleted.sets.last { bCompleted.removeFromExerciseSets(lastB); viewContext.delete(lastB) }
         do { try viewContext.save() } catch { }
+    }
+    
+    // MARK: - Drop Set Apply (standalone only)
+    
+    private func applyDropSet(targetSet: ExerciseSet, steps: [DropStep]) {
+        // Only allow for standalone exercises (not in superset view)
+        guard !(currentGroup?.isSuperset ?? false) else { return }
+        guard let completed = targetSet.completedExercise else { return }
+        
+        // Only replace if the target set is effectively empty
+        let isEmpty = (targetSet.isBodyweight ? targetSet.extraWeight == 0 : targetSet.weight == 0) && targetSet.reps == 0
+        guard isEmpty else { return }
+        
+        // Build a new ordered array of sets with the drop steps replacing the target
+        var sets = completed.sets
+        // Find index of target by order
+        guard let replaceIndex = sets.firstIndex(where: { $0.objectID == targetSet.objectID }) else { return }
+        // Remove target set
+        completed.removeFromExerciseSets(targetSet)
+        viewContext.delete(targetSet)
+        sets.removeAll(where: { $0.objectID == targetSet.objectID })
+        
+        // Create new sets for each step and insert at replaceIndex
+        var newSets: [ExerciseSet] = []
+        for step in steps {
+            let s = ExerciseSet(context: viewContext)
+            s.order = 0 // will be reassigned below
+            s.weight = step.weightKg
+            s.reps = Int16(step.reps)
+            s.isCompleted = true
+            s.isBodyweight = false
+            s.extraWeight = 0
+            s.restSeconds = 0
+            s.completedExercise = completed
+            newSets.append(s)
+            completed.addToExerciseSets(s)
+        }
+        
+        // Recompute final ordered list: take all sets currently attached to completed, sort by order excluding the new ones
+        // Simpler: rebuild from existing + new and write sequential orders
+        var finalSets: [ExerciseSet] = []
+        let before = sets.filter { Int($0.order) < replaceIndex }.sorted { $0.order < $1.order }
+        let after = sets.filter { Int($0.order) > replaceIndex }.sorted { $0.order < $1.order }
+        finalSets.append(contentsOf: before)
+        finalSets.append(contentsOf: newSets)
+        finalSets.append(contentsOf: after)
+        
+        for (idx, set) in finalSets.enumerated() {
+            set.order = Int16(idx)
+        }
+        
+        do {
+            try viewContext.save()
+            // Start rest timer after last step is applied
+            startRestTimer()
+            // Move focus to next set if any
+            if let next = finalSets.first(where: { Int($0.order) == finalSets.count }) {
+                let id = next.objectID.uriRepresentation().absoluteString
+                focusedEditingField = .weight(id)
+            }
+        } catch {
+            #if DEBUG
+            print("❌ Failed to apply drop set: \(error)")
+            #endif
+        }
     }
     
     // MARK: - Navigation Methods
@@ -1620,6 +1872,8 @@ struct SetRowView: View {
     }
     var supersetBadge: String? = nil
     var badgeColor: Color = .orange
+    var showDropButton: Bool = false
+    var onDropTapped: (() -> Void)? = nil
     @AppStorage("weightUnit") private var weightUnit: String = "kg"
     
     let setNumber: Int
@@ -1664,6 +1918,23 @@ struct SetRowView: View {
                         .frame(width: 20, height: 20)
                         .background(badgeColor)
                         .clipShape(Circle())
+                }
+                
+                // Optional Drop Set button (standalone only)
+                if showDropButton {
+                    Spacer(minLength: 6)
+                    Button(action: { onDropTapped?() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.down.to.line.compact")
+                            Text("Drop")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(8)
+                    }
                 }
                 
                 // Bodyweight toggle
@@ -2200,5 +2471,5 @@ struct RestTimerSettingsView: View {
                 defaultRestTime = savedTime
             }
         }
-    }
-} 
+    } 
+}
