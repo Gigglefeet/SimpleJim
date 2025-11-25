@@ -724,29 +724,37 @@ struct WorkoutSessionView: View {
                                         }
                                         
                     LazyVStack(spacing: 8) {
-                        ForEach(Array(getSetsForCurrentExercise().enumerated()), id: \.element.objectID) { idx, set in
-                            if set.restSeconds == 0 && (idx == 0 || getSetsForCurrentExercise()[idx - 1].restSeconds > 0) {
-                                HStack(spacing: 6) {
-                                    Text("Drop set")
-                                        .font(.caption2)
-                                        .foregroundColor(.orange)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.orange.opacity(0.15))
-                                        .cornerRadius(8)
-                                    Spacer()
+                        let items = buildStandaloneRenderItems(getSetsForCurrentExercise())
+                        ForEach(items) { item in
+                            if item.isDropGroup {
+                                VStack(spacing: 8) {
+                                    ForEach(item.sets, id: \.objectID) { set in
+                                        SetRowView(
+                                            set: set,
+                                            editingFocus: editingFocusBinding,
+                                            supersetBadge: nil,
+                                            badgeColor: .orange,
+                                            showDropButton: false,
+                                            setNumber: Int(set.order) + 1
+                                        ) {
+                                            // Auto-start rest timer when any set is completed
+                                            startRestTimer()
+                                        }
+                                        .id(set.objectID)
+                                    }
                                 }
-                            }
-                            SetRowView(set: set, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onApplyDrop: { steps in
-                                applyDropSet(targetSet: set, steps: steps)
-                            }, setNumber: Int(set.order) + 1) {
-                                // Auto-start rest timer when any set is completed
-                                startRestTimer()
-                                // If user completes set N, auto-advance focus to next set's weight field
-                                DispatchQueue.main.async {
-                                    if let next = getSetsForCurrentExercise().first(where: { Int($0.order) == Int(set.order) + 1 }) {
-                                        let id = next.objectID.uriRepresentation().absoluteString
-                                        focusedEditingField = .weight(id)
+                            } else if let only = item.sets.first {
+                                SetRowView(set: only, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onApplyDrop: { steps in
+                                    applyDropSet(targetSet: only, steps: steps)
+                                }, setNumber: Int(only.order) + 1) {
+                                    // Auto-start rest timer when any set is completed
+                                    startRestTimer()
+                                    // If user completes set N, auto-advance focus to next set's weight field
+                                    DispatchQueue.main.async {
+                                        if let next = getSetsForCurrentExercise().first(where: { Int($0.order) == Int(only.order) + 1 }) {
+                                            let id = next.objectID.uriRepresentation().absoluteString
+                                            focusedEditingField = .weight(id)
+                                        }
                                     }
                                 }
                             }
@@ -1006,6 +1014,34 @@ struct WorkoutSessionView: View {
         do { try viewContext.save() } catch { }
     }
     
+    // MARK: - Drop Group Rendering Helpers (standalone)
+    struct RenderItem: Identifiable {
+        let id: String
+        let sets: [ExerciseSet]
+        let isDropGroup: Bool
+    }
+    
+    private func buildStandaloneRenderItems(_ sets: [ExerciseSet]) -> [RenderItem] {
+        var items: [RenderItem] = []
+        var i = 0
+        while i < sets.count {
+            let current = sets[i]
+            if current.restSeconds < 0 {
+                var group: [ExerciseSet] = [current]
+                var j = i + 1
+                while j < sets.count && sets[j].restSeconds < 0 {
+                    group.append(sets[j]); j += 1
+                }
+                items.append(RenderItem(id: current.objectID.uriRepresentation().absoluteString, sets: group, isDropGroup: true))
+                i = j
+            } else {
+                items.append(RenderItem(id: current.objectID.uriRepresentation().absoluteString, sets: [current], isDropGroup: false))
+                i += 1
+            }
+        }
+        return items
+    }
+    
     // MARK: - Drop Set Apply (standalone only)
     
     private func applyDropSet(targetSet: ExerciseSet, steps: [DropStep]) {
@@ -1036,7 +1072,7 @@ struct WorkoutSessionView: View {
             s.isCompleted = true
             s.isBodyweight = false
             s.extraWeight = 0
-            s.restSeconds = 0
+            s.restSeconds = -1
             s.completedExercise = completed
             newSets.append(s)
             completed.addToExerciseSets(s)

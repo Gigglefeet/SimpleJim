@@ -9,6 +9,40 @@ struct SessionDetailView: View {
         session.template?.name ?? "Workout"
     }
     
+    // MARK: - Drop cluster helpers
+    struct SDCluster: Identifiable {
+        let id: String
+        let sets: [ExerciseSet]
+        let isDrop: Bool
+        func summary(weightUnit: String) -> String {
+            let parts = sets.map { set in
+                let w = Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit))
+                return "\(w)\(Units.unitSuffix(weightUnit))×\(set.reps)"
+            }
+            return parts.joined(separator: " → ")
+        }
+    }
+    private func buildClusters(_ sets: [ExerciseSet]) -> [SDCluster] {
+        var items: [SDCluster] = []
+        var i = 0
+        while i < sets.count {
+            let s = sets[i]
+            if s.restSeconds < 0 {
+                var g: [ExerciseSet] = [s]
+                var j = i + 1
+                while j < sets.count && sets[j].restSeconds < 0 {
+                    g.append(sets[j]); j += 1
+                }
+                items.append(SDCluster(id: s.objectID.uriRepresentation().absoluteString, sets: g, isDrop: true))
+                i = j
+            } else {
+                items.append(SDCluster(id: s.objectID.uriRepresentation().absoluteString, sets: [s], isDrop: false))
+                i += 1
+            }
+        }
+        return items
+    }
+    
     private var subtitleText: String {
         let dateString = session.date?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown"
         return dateString
@@ -106,30 +140,39 @@ struct SessionDetailView: View {
                     .foregroundColor(.secondary)
             }
             
-            // Compact list of sets
+            // Compact list of sets (group drop clusters)
             VStack(alignment: .leading, spacing: 6) {
-                let sets = completed.sets
-                ForEach(Array(sets.enumerated()), id: \.element.objectID) { idx, set in
-                    if set.restSeconds == 0 && (idx == 0 || sets[idx - 1].restSeconds > 0) {
-                        Text("Drop set")
-                            .font(.caption2)
-                            .foregroundColor(.orange)
-                            .padding(.vertical, 2)
-                    }
-                    HStack(spacing: 8) {
-                        Text(set.isBodyweight ? "BW" : "\(Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                            .frame(width: 60, alignment: .leading)
-                        Text("×")
-                            .foregroundColor(.secondary)
-                        Text("\(set.reps)")
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                        if set.isCompleted {
-                            Spacer()
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                let items = buildClusters(completed.sets)
+                ForEach(items, id: \.id) { item in
+                    if item.isDrop {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Drop set")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                            Text(item.summary(weightUnit: weightUnit))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            ForEach(item.sets, id: \.objectID) { set in
+                                HStack(spacing: 8) {
+                                    Text(set.isBodyweight ? "BW" : "\(Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
+                                        .frame(width: 60, alignment: .leading)
+                                    Text("×").foregroundColor(.secondary)
+                                    Text("\(set.reps)").font(.caption).foregroundColor(.primary)
+                                    if set.isCompleted { Spacer(); Image(systemName: "checkmark.circle.fill").foregroundColor(.green) }
+                                }
+                            }
+                        }
+                    } else if let set = item.sets.first {
+                        HStack(spacing: 8) {
+                            Text(set.isBodyweight ? "BW" : "\(Int(Units.kgToDisplay(set.effectiveWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit))")
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                                .frame(width: 60, alignment: .leading)
+                            Text("×").foregroundColor(.secondary)
+                            Text("\(set.reps)").font(.caption).foregroundColor(.primary)
+                            if set.isCompleted { Spacer(); Image(systemName: "checkmark.circle.fill").foregroundColor(.green) }
                         }
                     }
                 }
