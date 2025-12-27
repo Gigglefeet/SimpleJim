@@ -148,6 +148,10 @@ struct ProfileView: View {
                             
                             Text("Export Training Data")
                                 .foregroundColor(.primary)
+
+                            Text("(Coming Soon)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                             
                             Spacer()
                         }

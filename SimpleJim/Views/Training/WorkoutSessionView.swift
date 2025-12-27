@@ -29,7 +29,7 @@ struct DropSetComposerView: View {
     private var unitSuffix: String { Units.unitSuffix(weightUnit) }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Drop Set").font(.headline)) {
                     Stepper(value: $stepCount, in: 1...3) {
@@ -364,7 +364,7 @@ struct WorkoutSessionView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 headerSection
                 exerciseContentSection
@@ -2493,7 +2493,7 @@ struct RestTimerSettingsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     Image(systemName: "timer.circle.fill")

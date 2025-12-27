@@ -68,13 +68,34 @@ struct PersistenceController {
             description.shouldMigrateStoreAutomatically = true
             description.shouldInferMappingModelAutomatically = true
         }
+        var didAttemptRepair = false
 
-        container.loadPersistentStores { storeDescription, error in
+        let persistentContainer = container
+        let coordinator = persistentContainer.persistentStoreCoordinator
+
+        persistentContainer.loadPersistentStores { storeDescription, error in
             if let error = error {
                 Self.logger.error("Core Data failed to load store: \(error.localizedDescription)")
-                // In production, we should handle this more gracefully
-                // For now, we'll continue with the app potentially in a broken state
-                // TODO: Add proper error recovery or migration handling
+                if !didAttemptRepair, let storeURL = storeDescription.url {
+                    didAttemptRepair = true
+                    do {
+                        try coordinator.destroyPersistentStore(
+                            at: storeURL,
+                            ofType: NSSQLiteStoreType,
+                            options: nil
+                        )
+                        Self.logger.info("Destroyed corrupted Core Data store. Attempting to recreate…")
+                        persistentContainer.loadPersistentStores { _, secondError in
+                            if let secondError = secondError {
+                                Self.logger.error("Core Data recovery failed: \(secondError.localizedDescription)")
+                            } else {
+                                Self.logger.info("Core Data store recreated successfully after repair.")
+                            }
+                        }
+                    } catch {
+                        Self.logger.error("Failed to destroy corrupted store: \(error.localizedDescription)")
+                    }
+                }
             } else {
                 Self.logger.info("Core Data store loaded successfully")
             }

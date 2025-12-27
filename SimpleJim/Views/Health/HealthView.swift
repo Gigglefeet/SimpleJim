@@ -33,7 +33,7 @@ struct HealthView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header with controls
                 headerSection
@@ -566,7 +566,7 @@ struct DayDetailView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 16) {
