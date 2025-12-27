@@ -90,6 +90,7 @@ struct PersistenceController {
                                 Self.logger.error("Core Data recovery failed: \(secondError.localizedDescription)")
                             } else {
                                 Self.logger.info("Core Data store recreated successfully after repair.")
+                                UserDefaults.standard.set(true, forKey: "coreDataStoreRepaired")
                             }
                         }
                     } catch {

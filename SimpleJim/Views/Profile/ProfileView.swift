@@ -1,10 +1,14 @@
 import SwiftUI
+import UserNotifications
+import UIKit
 
 struct ProfileView: View {
+    @Environment(\.openURL) private var openURL
     @State private var showingGoalsSheet = false
     @State private var showingExportSheet = false
     @State private var showingUnitsSheet = false
     @State private var notificationsEnabled = true
+    @State private var showingNotificationSettingsAlert = false
     
     // User defaults for settings
     @AppStorage("sleepGoal") private var sleepGoal: Double = 8.0
@@ -14,7 +18,7 @@ struct ProfileView: View {
     @AppStorage("defaultBodyweight") private var defaultBodyweight: Double = 70.0
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 // User Stats Section
                 Section("Your Progress") {
@@ -136,6 +140,21 @@ struct ProfileView: View {
                             .labelsHidden()
                     }
                 }
+                .onChange(of: notificationsEnabled) { enabled in
+                    if enabled {
+                        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                            if !granted {
+                                DispatchQueue.main.async {
+                                    notificationsEnabled = false
+                                    showingNotificationSettingsAlert = true
+                                }
+                            }
+                        }
+                    } else {
+                        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+                        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+                    }
+                }
                 
                 // Data Section
                 Section("Data Management") {
@@ -211,6 +230,16 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
         }
+        .alert("Notifications Disabled", isPresented: $showingNotificationSettingsAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(url)
+                }
+            }
+        } message: {
+            Text("To enable workout reminders, allow notifications in Settings.")
+        }
         .sheet(isPresented: $showingGoalsSheet) {
             GoalsSettingsView(sleepGoal: $sleepGoal, proteinGoal: $proteinGoal)
         }
@@ -231,7 +260,7 @@ struct GoalsSettingsView: View {
     @Binding var proteinGoal: Double
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("Sleep Goal") {
                     HStack {
@@ -275,7 +304,7 @@ struct UnitsSettingsView: View {
     private let weightUnits = ["kg", "lbs"]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("Weight Units") {
                     Picker("Weight Unit", selection: $weightUnit) {
@@ -310,7 +339,7 @@ struct ExportDataView: View {
     @State private var isExporting = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 60))

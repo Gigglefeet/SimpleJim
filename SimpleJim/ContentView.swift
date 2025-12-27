@@ -5,6 +5,7 @@ import CoreData
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("coreDataStoreRepaired") private var coreDataStoreRepaired: Bool = false
     @State private var selectedTab = 0
     @State private var hasPerformedStartupCleanup = false
     @State private var resumeSessionObjectIDURL: URL? = nil
@@ -12,6 +13,7 @@ struct ContentView: View {
     @State private var resumeObserver: NSObjectProtocol? = nil
     @State private var pendingResumeURL: URL? = nil
     @State private var finishObserver: NSObjectProtocol? = nil
+    @State private var showingRepairAlert = false
     
     var body: some View {
         Group {
@@ -55,6 +57,10 @@ struct ContentView: View {
             if !hasPerformedStartupCleanup {
                 cleanupOrphanedSessions()
                 hasPerformedStartupCleanup = true
+            }
+            if coreDataStoreRepaired {
+                showingRepairAlert = true
+                coreDataStoreRepaired = false
             }
             // Install observer once to avoid duplicate sheet presentations
             if resumeObserver == nil {

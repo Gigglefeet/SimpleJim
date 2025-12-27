@@ -509,6 +509,7 @@ struct WeekDayRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "moon.stars.fill")
                                 .foregroundColor(.blue)
+                                .accessibilityLabel(Text("Sleep"))
                                 .font(.caption)
                             
                             Text(String(format: "%.1fh", dayData.sleepHours))
@@ -521,6 +522,7 @@ struct WeekDayRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "fork.knife.circle.fill")
                                 .foregroundColor(.green)
+                                .accessibilityLabel(Text("Protein"))
                                 .font(.caption)
                             
                             Text("\(Int(dayData.proteinGrams))g")
@@ -534,6 +536,7 @@ struct WeekDayRowView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "dumbbell.fill")
                             .foregroundColor(.orange)
+                            .accessibilityLabel(Text("Workout"))
                             .font(.caption)
                         
                         Text("\(Int(Units.kgToDisplay(dayData.totalWeight, unit: weightUnit)))\(Units.unitSuffix(weightUnit)) • \(dayData.exerciseCount) exercises")
@@ -579,6 +582,7 @@ struct DayDetailView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "moon.stars.fill")
                                         .foregroundColor(.blue)
+                                        .accessibilityLabel(Text("Sleep"))
                                     Text("Sleep")
                                         .font(.subheadline)
                                         .bold()
@@ -596,6 +600,7 @@ struct DayDetailView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "fork.knife.circle.fill")
                                         .foregroundColor(.green)
+                                        .accessibilityLabel(Text("Protein"))
                                     Text("Protein")
                                         .font(.subheadline)
                                         .bold()
