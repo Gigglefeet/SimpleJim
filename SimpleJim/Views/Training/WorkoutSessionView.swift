@@ -757,11 +757,11 @@ struct WorkoutSessionView: View {
                                     }
                                     
                                     VStack(spacing: 8) {
-                                        ForEach(item.sets, id: \.objectID) { set in
+                                        ForEach(Array(item.sets.enumerated()), id: \.element.objectID) { idx, set in
                                             SetRowView(
                                                 set: set,
                                                 editingFocus: editingFocusBinding,
-                                                supersetBadge: nil,
+                                                supersetBadge: String(idx + 1),
                                                 badgeColor: .orange,
                                                 showDropButton: false,
                                                 setNumber: Int(set.order) + 1
