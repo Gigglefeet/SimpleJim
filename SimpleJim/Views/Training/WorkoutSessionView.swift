@@ -762,6 +762,7 @@ struct WorkoutSessionView: View {
                                                 set: set,
                                                 editingFocus: editingFocusBinding,
                                                 supersetBadge: String(idx + 1),
+                                                isDropContext: true,
                                                 badgeColor: .orange,
                                                 showDropButton: false,
                                                 setNumber: Int(set.order) + 1
@@ -775,7 +776,7 @@ struct WorkoutSessionView: View {
                                     .padding(.leading, 2)
                                 }
                                 .padding(.vertical, 6)
-                                .background(Color.orange.opacity(0.06))
+                                .background(Color.orange.opacity(0.12))
                                 .cornerRadius(10)
                             } else if let only = item.sets.first {
                                 SetRowView(set: only, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onApplyDrop: { steps in
@@ -1930,6 +1931,7 @@ struct SetRowView: View {
         `set`.objectID.uriRepresentation().absoluteString
     }
     var supersetBadge: String? = nil
+    var isDropContext: Bool = false
     var badgeColor: Color = .orange
     var showDropButton: Bool = false
     var onApplyDrop: (([DropStep]) -> Void)? = nil
@@ -1981,6 +1983,15 @@ struct SetRowView: View {
                         .frame(width: 20, height: 20)
                         .background(badgeColor)
                         .clipShape(Circle())
+                }
+                if isDropContext {
+                    Text("↓ Drop")
+                        .font(.caption2).bold()
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(6)
                 }
                 
                 // Optional Drop Set button (standalone only)
@@ -2161,8 +2172,9 @@ struct SetRowView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(isDropContext ? Color.orange.opacity(0.10) : Color(.systemGray6))
         .cornerRadius(10)
+        .overlay( Group { if isDropContext { RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.35), lineWidth: 2) } } )
         // Inline Drop Set UI
         .overlay(
             VStack(spacing: 8) {
