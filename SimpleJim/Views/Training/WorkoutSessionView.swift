@@ -175,7 +175,8 @@ struct WorkoutSessionView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    
+
+    @AppStorage("weightUnit") private var weightUnit: String = "kg"    
     let dayTemplate: TrainingDayTemplate
     @ObservedObject var trainingSession: TrainingSession
     
@@ -727,22 +728,55 @@ struct WorkoutSessionView: View {
                         let items = buildStandaloneRenderItems(getSetsForCurrentExercise())
                         ForEach(items) { item in
                             if item.isDropGroup {
-                                VStack(spacing: 8) {
-                                    ForEach(item.sets, id: \.objectID) { set in
-                                        SetRowView(
-                                            set: set,
-                                            editingFocus: editingFocusBinding,
-                                            supersetBadge: nil,
-                                            badgeColor: .orange,
-                                            showDropButton: false,
-                                            setNumber: Int(set.order) + 1
-                                        ) {
-                                            // Auto-start rest timer when any set is completed
-                                            startRestTimer()
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "link")
+                                                .foregroundColor(.orange)
+                                                .font(.caption)
+                                            Text("Drop Set")
+                                                .font(.caption)
+                                                .bold()
+                                                .foregroundColor(.orange)
                                         }
-                                        .id(set.objectID)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.orange.opacity(0.15))
+                                        .cornerRadius(8)
+                                        
+                                        let parts: [String] = item.sets.map { s in
+                                            let w = Int(Units.kgToDisplay(s.effectiveWeight, unit: weightUnit))
+                                            return "\(w)\(Units.unitSuffix(weightUnit))×\(s.reps)"
+                                        }
+                                        Text(parts.joined(separator: " → "))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
+                                        Spacer(minLength: 0)
                                     }
+                                    
+                                    VStack(spacing: 8) {
+                                        ForEach(item.sets, id: \.objectID) { set in
+                                            SetRowView(
+                                                set: set,
+                                                editingFocus: editingFocusBinding,
+                                                supersetBadge: nil,
+                                                badgeColor: .orange,
+                                                showDropButton: false,
+                                                setNumber: Int(set.order) + 1
+                                            ) {
+                                                // Auto-start rest timer when any set is completed
+                                                startRestTimer()
+                                            }
+                                            .id(set.objectID)
+                                        }
+                                    }
+                                    .padding(.leading, 2)
                                 }
+                                .padding(.vertical, 6)
+                                .background(Color.orange.opacity(0.06))
+                                .cornerRadius(10)
                             } else if let only = item.sets.first {
                                 SetRowView(set: only, editingFocus: editingFocusBinding, supersetBadge: nil, badgeColor: .orange, showDropButton: true, onApplyDrop: { steps in
                                     applyDropSet(targetSet: only, steps: steps)

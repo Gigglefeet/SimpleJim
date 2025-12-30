@@ -144,9 +144,7 @@ struct HealthView: View {
                     proteinGoal: proteinGoal
                 )
                 .onTapGesture {
-                    selectedDayData = dayData
-                    selectedSession = getTrainingSession(for: dayData.date)
-                    showingDetailSheet = true
+                    presentDayDetail(for: dayData)
                 }
             }
         }
@@ -162,9 +160,7 @@ struct HealthView: View {
                     proteinGoal: proteinGoal
                 )
                 .onTapGesture {
-                    selectedDayData = dayData
-                    selectedSession = getTrainingSession(for: dayData.date)
-                    showingDetailSheet = true
+                    presentDayDetail(for: dayData)
                 }
             }
         }
@@ -217,6 +213,36 @@ struct HealthView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func startOfDay(_ date: Date) -> Date {
+        return Calendar.current.startOfDay(for: date)
+    }
+    
+    private func fastFetchSession(for date: Date) -> TrainingSession? {
+        let start = startOfDay(date)
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
+        let request: NSFetchRequest<TrainingSession> = TrainingSession.fetchRequest()
+        request.predicate = NSPredicate(format: "date >= %@ AND date < %@", start as NSDate, end as NSDate)
+        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+        request.fetchLimit = 1
+        request.returnsObjectsAsFaults = false
+        request.relationshipKeyPathsForPrefetching = ["template", "completedExercises", "completedExercises.exerciseSets"]
+        do {
+            return try viewContext.fetch(request).first
+        } catch {
+            #if DEBUG
+            print("❌ fastFetchSession error: \(error)")
+            #endif
+            return nil
+        }
+    }
+    
+    private func presentDayDetail(for dayData: DayData) {
+        selectedDayData = dayData
+        // Resolve quickly via direct fetch with prefetch to avoid lazy fault delays
+        selectedSession = fastFetchSession(for: dayData.date)
+        showingDetailSheet = true
+    }
     
     private func changeMonth(_ direction: Int) {
         withAnimation(.easeInOut(duration: 0.3)) {
